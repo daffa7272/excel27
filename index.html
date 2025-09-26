@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PintasanXL - Pelatih Cerdas Shortcut Excel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* bg-slate-900 */
+        }
+        .key, .key-func {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0.25rem 0.75rem; border-radius: 0.375rem; background-color: #334155;
+            border: 1px solid #475569; box-shadow: 0 2px 0 0 #1e293b;
+            font-weight: 500; font-size: 0.875rem; margin: 0 0.25rem;
+            min-width: 2.5rem; text-align: center; white-space: nowrap; transition: all 0.2s ease;
+        }
+        .key-func {
+            background-color: #15803d; /* bg-green-700 */
+            border-color: #166534; /* border-green-800 */
+        }
+        .key-lg { padding: 0.25rem 1.5rem; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Styles for Interactive Excel Simulation */
+        .excel-grid {
+            display: grid;
+            grid-template-columns: 40px repeat(6, 1fr); /* Column for row numbers + 6 data columns */
+            border: 1px solid #475569;
+            user-select: none; /* Prevent text selection during drag */
+        }
+        .grid-cell {
+            border: 1px solid #334155;
+            padding: 0.5rem;
+            min-height: 40px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            color: #cbd5e1;
+            position: relative;
+            cursor: cell;
+            transition: background-color 0.2s, opacity 0.3s;
+        }
+        .grid-header {
+            background-color: #1e293b;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .grid-cell.active {
+            outline: 2px solid #38bdf8; /* light-blue-400 */
+            z-index: 10;
+        }
+        .grid-cell.selected {
+             background-color: rgba(56, 189, 248, 0.2);
+             outline: 1px solid rgba(56, 189, 248, 0.5);
+        }
+        .grid-cell.hidden-col, .grid-cell.hidden-row {
+            padding: 0;
+            min-width: 0;
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .table-header {
+            background-color: #1e3a8a; /* bg-blue-800 */
+            font-weight: bold;
+        }
+        .table-row-alt {
+            background-color: #1e293b; /* bg-slate-800 */
+        }
+        
+        @keyframes cell-flash-success {
+            0% { background-color: initial; }
+            50% { background-color: rgba(74, 222, 128, 0.4); } /* green-400 */
+            100% { background-color: initial; }
+        }
+        .cell-flash {
+            animation: cell-flash-success 1.2s ease-out;
+        }
+
+        /* Tab Styles */
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: transparent;
+            color: #94a3b8; /* slate-400 */
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            transition: color 0.2s ease-in-out;
+        }
+        .tab-btn.active-tab {
+            color: #38bdf8; /* light-blue-400 */
+        }
+        .tab-btn.active-tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #38bdf8; /* light-blue-400 */
+        }
+
+        .sub-tab-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #334155;
+            background-color: #1e293b;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            font-size: 0.875rem;
+        }
+        .sub-tab-btn:first-child { border-radius: 0.375rem 0 0 0.375rem; }
+        .sub-tab-btn:last-child { border-radius: 0 0.375rem 0.375rem 0; }
+        .sub-tab-btn.active-sub-tab {
+            background-color: #38bdf8;
+            color: #fff;
+            border-color: #38bdf8;
+        }
+        
+        /* Toast Notification */
+        #toast-notification {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translate(-50%, 150%);
+            transition: transform 0.5s ease-in-out;
+            z-index: 100;
+        }
+        #toast-notification.show {
+            transform: translate(-50%, 0);
+        }
+        
+        /* Challenge Mode Puzzle Styles */
+        .puzzle-piece { cursor: pointer; }
+        .answer-zone { border: 2px dashed #475569; }
+        @keyframes flash-green { 50% { background-color: #166534; border-color: #22c55e; } }
+        @keyframes flash-red { 50% { background-color: #991b1b; border-color: #ef4444; } }
+        .flash-correct { animation: flash-green 0.4s; }
+        .flash-wrong { animation: flash-red 0.4s; }
+
+        .step-item .step-icon {
+            transition: all 0.3s ease;
+        }
+        .step-item.active {
+            background-color: #1e3a8a; /* blue-800 */
+        }
+        .step-item.completed {
+            opacity: 0.6;
+        }
+
+        #case-study-grid-container {
+            overflow-x: auto;
+        }
+        
+        @media (max-width: 1024px) {
+            #case-study-modal > div {
+                flex-direction: column;
+                height: 95vh;
+            }
+            #case-study-modal .w-1\/4, #case-study-modal .w-3\/4 {
+                width: 100%;
+                height: auto;
+            }
+            #case-study-modal .w-1\/4 {
+                flex-shrink: 0;
+                overflow-y: auto;
+                height: 40%;
+            }
+        }
+
+        .prose-gemini { color: #cbd5e1; }
+        .prose-gemini h3 { color: #fff; font-weight: 600; }
+        .prose-gemini p { margin-bottom: 1em; line-height: 1.6; }
+        .prose-gemini code { background-color: #334155; padding: 0.2em 0.4em; margin: 0; font-size: 85%; border-radius: 6px; }
+        .prose-gemini ul { list-style-type: disc; padding-left: 1.5em; }
+        .prose-gemini li { margin-bottom: 0.5em; }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <div class="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-4 sm:p-6 lg:p-8">
+        <div class="max-w-4xl mx-auto">
+            
+            <header class="text-center mb-8 relative">
+                <h1 class="text-4xl sm:text-5xl font-bold text-white tracking-tight flex items-center justify-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M12 19c-4 0-5-2-5-4s1-4 5-4 5 2 5 4-1 4-5 4Z"/><path d="M12 5c-4 0-5 2-5-4s1-4 5-4 5-2 5-4-1-4-5-4Z"/><path d="m14 2-3 3 3 3"/><path d="m14 22-3-3 3-3"/></svg>
+                    PintasanXL
+                </h1>
+                <p class="mt-2 text-slate-400">Pelatih Cerdas Shortcut & Fungsi Excel Anda</p>
+                <div id="user-stats" class="absolute top-0 right-0 flex flex-col items-center gap-2 bg-slate-800/50 p-3 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="star" class="w-5 h-5 text-amber-400"></i>
+                        <span id="score" class="font-bold text-lg text-white">0</span>
+                    </div>
+                    <button id="open-badges-btn" class="text-xs text-blue-400 hover:text-blue-300 font-semibold">Lencana Saya</button>
+                </div>
+            </header>
+            
+            <div class="bg-slate-800/50 p-4 rounded-lg mb-8 flex flex-col md:flex-row items-center justify-center gap-4">
+                 <button id="open-learning-path-btn" class="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform flex items-center justify-center gap-2 w-full md:w-auto">
+                    <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                    Jalur Belajar
+                </button>
+                <button id="start-challenge-btn" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform flex items-center justify-center gap-2 w-full md:w-auto">
+                    <i data-lucide="timer" class="w-5 h-5"></i>
+                    Mulai Tantangan Waktu
+                </button>
+                <button id="start-case-study-btn" class="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform flex items-center justify-center gap-2 w-full md:w-auto">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                    Mulai Studi Kasus
+                </button>
+            </div>
+
+            <div class="sticky top-4 bg-slate-900/50 backdrop-blur-sm z-20 py-4 rounded-lg">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="text-slate-400"></i>
+                    </div>
+                    <input type="text" id="searchInput" placeholder="Ketik apa yang ingin Anda lakukan... (misal: gabung sel, cari data vlookup)"
+                        class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                </div>
+                <div class="flex items-center justify-center gap-4 mt-4">
+                    <span class="text-sm text-slate-400">Sistem Operasi:</span>
+                    <button id="winButton" class="os-btn bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-semibold transition">Windows</button>
+                    <button id="macButton" class="os-btn bg-slate-700 text-slate-300 hover:bg-slate-600 px-4 py-1.5 rounded-md text-sm font-semibold transition">macOS</button>
+                </div>
+            </div>
+
+            <div id="sotd-container" class="my-8">
+                <!-- Card SotD akan diisi oleh JavaScript -->
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="border-b border-slate-700 mb-6">
+                <nav id="tab-switcher" class="flex justify-center -mb-px">
+                    <button class="tab-btn active-tab" data-tab="dasar">
+                        <i data-lucide="zap" class="inline-block w-4 h-4 mr-2"></i>Pintasan Dasar
+                    </button>
+                    <button class="tab-btn" data-tab="fungsi">
+                        <i data-lucide="function-square" class="inline-block w-4 h-4 mr-2"></i>Fungsi & Rumus
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tab-content">
+                <div id="dasar-content" class="tab-pane">
+                    <nav class="sub-tab-switcher flex justify-center mb-6">
+                        <button class="sub-tab-btn active-sub-tab" data-sub-tab="other">Lainnya</button>
+                        <button class="sub-tab-btn" data-sub-tab="ctrlNum">Ctrl + [Angka]</button>
+                        <button class="sub-tab-btn" data-sub-tab="alt">Alt + [...]</button>
+                    </nav>
+                    <div id="other-content" class="sub-tab-pane">
+                        <div id="other-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="ctrlNum-content" class="sub-tab-pane hidden">
+                        <div id="ctrl-num-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="alt-content" class="sub-tab-pane hidden">
+                        <div id="alt-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                     <div id="dasar-no-results" class="hidden text-center py-12">
+                         <i data-lucide="frown" class="mx-auto h-12 w-12 text-slate-500"></i>
+                         <h3 class="mt-2 text-lg font-medium text-white">Tidak ditemukan hasil di kategori ini</h3>
+                    </div>
+                </div>
+                <div id="fungsi-content" class="tab-pane hidden">
+                     <nav class="sub-tab-switcher flex justify-center mb-6">
+                        <button class="sub-tab-btn active-sub-tab" data-sub-tab="lookup">Lookup & Referensi</button>
+                        <button class="sub-tab-btn" data-sub-tab="statistik">Statistik & Analisis</button>
+                        <button class="sub-tab-btn" data-sub-tab="logika">Logika</button>
+                        <button class="sub-tab-btn" data-sub-tab="teks">Teks & Cleaning Data</button>
+                        <button class="sub-tab-btn" data-sub-tab="tanggal">Tanggal & Waktu</button>
+                        <button class="sub-tab-btn" data-sub-tab="keuangan">Keuangan</button>
+                    </nav>
+                    <div id="lookup-content" class="sub-tab-pane">
+                        <div id="lookup-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="statistik-content" class="sub-tab-pane hidden">
+                        <div id="statistik-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="logika-content" class="sub-tab-pane hidden">
+                        <div id="logika-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="teks-content" class="sub-tab-pane hidden">
+                        <div id="teks-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="tanggal-content" class="sub-tab-pane hidden">
+                        <div id="tanggal-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    <div id="keuangan-content" class="sub-tab-pane hidden">
+                        <div id="keuangan-results-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                     <div id="fungsi-no-results" class="hidden text-center py-12">
+                         <i data-lucide="frown" class="mx-auto h-12 w-12 text-slate-500"></i>
+                         <h3 class="mt-2 text-lg font-medium text-white">Tidak ditemukan hasil di kategori ini</h3>
+                    </div>
+                </div>
+            </div>
+
+
+            <footer class="text-center mt-12 text-slate-500 text-sm">
+                <p>Dibuat untuk mempermudah pekerjaan Anda di Excel.</p>
+                <p>Copyright © 2025 | @Daffauzora</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="practice-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2"><i data-lucide="keyboard" class="text-blue-400"></i>Mode Latihan Interaktif</h3>
+                <button id="close-modal-btn" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div id="instruction-box" class="bg-slate-700 p-4 rounded-md mb-4 text-center">
+                    <p class="font-semibold text-blue-300">TUGAS:</p>
+                    <p id="instruction-text" class="text-lg text-white"></p>
+                </div>
+
+                <div id="formula-breakdown-container" class="hidden bg-slate-700/50 p-4 rounded-md mb-4">
+                    <p class="font-semibold text-amber-300 mb-2 flex items-center gap-2"><i data-lucide="book-open" class="w-5 h-5"></i>Struktur Rumus</p>
+                    <code id="formula-syntax" class="block bg-slate-900 p-3 rounded-md text-white font-mono text-sm whitespace-pre-wrap"></code>
+                    <div id="formula-parts" class="mt-3 text-sm space-y-2"></div>
+                </div>
+
+                <div id="excel-simulation-container" class="bg-slate-900 p-2 rounded-lg">
+                    <!-- Excel grid will be generated here -->
+                </div>
+                <div id="formula-input-container" class="hidden mt-4 flex items-center gap-2">
+                    <span class="bg-slate-700 px-3 py-2 rounded-l-md font-mono text-slate-400">=</span>
+                    <input type="text" id="formula-input" placeholder="Ketik rumus Anda di sini..." class="flex-grow bg-slate-900 border border-slate-700 rounded-r-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button id="submit-formula-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md">Cek</button>
+                    <button id="show-answer-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2 text-sm"><i data-lucide="key-round" class="w-4 h-4"></i>Jawaban</button>
+                </div>
+                <div id="feedback-box" class="hidden mt-4 p-3 rounded-md text-center font-semibold"></div>
+                
+                <div class="mt-4">
+                    <button id="explain-formula-btn" class="hidden w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-2.5 rounded-md transition-all flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>Jelaskan Rumus Ini dengan AI
+                    </button>
+                </div>
+                <div id="gemini-explanation-container" class="hidden mt-4 p-4 bg-slate-900/50 rounded-lg prose-gemini">
+                    <!-- Gemini explanation will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="badges-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2"><i data-lucide="award" class="text-amber-400"></i>Lencana Saya</h3>
+                <button id="close-badges-modal-btn" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div id="badges-container" class="p-6 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Badges will be generated here -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="challenge-modal" class="hidden fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center p-4">
+        <!-- Challenge content will be generated here -->
+    </div>
+
+    <div id="learning-path-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2"><i data-lucide="graduation-cap" class="text-green-400"></i>Jalur Belajar Anda</h3>
+                <button id="close-learning-path-modal-btn" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div id="learning-path-container" class="p-6 overflow-y-auto space-y-6">
+                <!-- Learning Paths will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="case-study-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-lg shadow-xl w-full max-w-7xl h-[95vh] flex flex-row">
+            <!-- Sidebar Steps -->
+            <div class="w-1/4 bg-slate-800/50 p-6 flex flex-col rounded-l-lg border-r border-slate-700">
+                <h3 class="text-xl font-bold text-white mb-2">Studi Kasus</h3>
+                <p class="text-amber-300 font-semibold mb-6">Analisis Laporan Penjualan</p>
+                <ul id="case-study-steps-container" class="space-y-4">
+                    <!-- Steps will be generated here -->
+                </ul>
+                <div class="mt-auto">
+                     <button id="close-case-study-btn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded-md">Keluar</button>
+                </div>
+            </div>
+            <!-- Main Content -->
+            <div class="w-3/4 flex flex-col p-6">
+                <div id="case-study-instruction-box" class="bg-slate-800 p-4 rounded-md mb-4 text-center ring-1 ring-blue-500">
+                    <p class="font-semibold text-blue-300">LANGKAH SAAT INI:</p>
+                    <p id="case-study-instruction-text" class="text-lg text-white"></p>
+                </div>
+                <div id="case-study-grid-container" class="bg-slate-900 p-2 rounded-lg flex-grow">
+                    <!-- Case study grid will be generated here -->
+                </div>
+                <div id="case-study-formula-container" class="hidden mt-4 flex items-center gap-2">
+                     <span class="bg-slate-700 px-3 py-2 rounded-l-md font-mono text-slate-400">=</span>
+                    <input type="text" id="case-study-formula-input" placeholder="Ketik rumus Anda di sini..." class="flex-grow bg-slate-800 border border-slate-700 rounded-r-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <button id="case-study-submit-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md">Cek Jawaban</button>
+                </div>
+                 <div id="case-study-feedback-box" class="hidden mt-4 p-3 rounded-md text-center font-semibold"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="toast-notification" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg shadow-2xl flex items-center gap-4">
+        <!-- Toast content will be generated here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DATA SHORTCUT & FUNGSI ---
+            const shortcutsData = [
+                // Kategori: Dasar
+                { id: 'copy', task: "Menyalin Sel/Data", category: "Dasar", subCategory: 'other', winKeys: ['Ctrl', 'C'], macKeys: ['Cmd', 'C'], keywords: ['copy', 'salin'] },
+                { id: 'paste', task: "Menempelkan Sel/Data", category: "Dasar", subCategory: 'other', winKeys: ['Ctrl', 'V'], macKeys: ['Cmd', 'V'], keywords: ['paste', 'tempel'] },
+                { id: 'undo', task: "Membatalkan Aksi Terakhir", category: "Dasar", subCategory: 'other', winKeys: ['Ctrl', 'Z'], macKeys: ['Cmd', 'Z'], keywords: ['undo', 'batal'] },
+
+                // Kategori: Navigasi
+                { id: 'jumpEdge', task: "Lompat ke Ujung Data", category: "Navigasi", subCategory: 'other', winKeys: ['Ctrl', 'Panah Bawah'], macKeys: ['Cmd', 'Panah Bawah'], keywords: ['navigasi', 'lompat', 'edge'] },
+                { id: 'goToA1', task: "Pergi ke Sel A1", category: "Navigasi", subCategory: 'other', winKeys: ['Ctrl', 'Home'], macKeys: ['Cmd', 'Fn', 'Panah Kiri'], keywords: ['go to home', 'awal'] },
+                { id: 'goToEnd', task: "Pergi ke Akhir Worksheet", category: "Navigasi", subCategory: 'other', winKeys: ['Ctrl', 'End'], macKeys: ['Cmd', 'Fn', 'Panah Kanan'], keywords: ['go to end', 'akhir'] },
+                
+                // Kategori: Seleksi
+                { id: 'selectCol', task: "Memilih Seluruh Kolom", category: "Seleksi", subCategory: 'other', winKeys: ['Ctrl', 'Spasi'], macKeys: ['Control', 'Spasi'], keywords: ['select column', 'pilih kolom'] },
+                { id: 'selectRow', task: "Memilih Seluruh Baris", category: "Seleksi", subCategory: 'other', winKeys: ['Shift', 'Spasi'], macKeys: ['Shift', 'Spasi'], keywords: ['select row', 'pilih baris'] },
+                { id: 'hideCols', task: "Sembunyikan Kolom", category: "Seleksi", subCategory: 'ctrlNum', winKeys: ['Ctrl', '0'], macKeys: ['Cmd', '0'], keywords: ['hide columns', 'sembunyi kolom'] },
+                { id: 'hideRows', task: "Sembunyikan Baris", category: "Seleksi", subCategory: 'ctrlNum', winKeys: ['Ctrl', '9'], macKeys: ['Cmd', '9'], keywords: ['hide rows', 'sembunyi baris'] },
+                 { id: 'deleteRowCol', task: "Hapus Baris/Kolom", category: "Seleksi", subCategory: 'other', winKeys: ['Ctrl', '-'], macKeys: ['Cmd', '-'], keywords: ['delete', 'hapus'] },
+                { id: 'insertRowCol', task: "Sisipkan Baris/Kolom", category: "Seleksi", subCategory: 'other', winKeys: ['Ctrl', '+'], macKeys: ['Cmd', '+'], keywords: ['insert', 'sisip'] },
+                
+                // Kategori: Format
+                { id: 'bold', task: "Teks Tebal (Bold)", category: "Format", subCategory: 'other', winKeys: ['Ctrl', 'B'], macKeys: ['Cmd', 'B'], keywords: ['bold', 'tebal'] },
+                { id: 'bold2', task: "Teks Tebal (Alternatif)", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '2'], macKeys: ['Cmd', '2'], keywords: ['bold', 'tebal'] },
+                { id: 'italic', task: "Teks Miring (Italic)", category: "Format", subCategory: 'other', winKeys: ['Ctrl', 'I'], macKeys: ['Cmd', 'I'], keywords: ['italic', 'miring'] },
+                { id: 'italic2', task: "Teks Miring (Alternatif)", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '3'], macKeys: ['Cmd', '3'], keywords: ['italic', 'miring'] },
+                { id: 'underline', task: "Garis Bawah (Underline)", category: "Format", subCategory: 'other', winKeys: ['Ctrl', 'U'], macKeys: ['Cmd', 'U'], keywords: ['underline', 'garis bawah'] },
+                 { id: 'underline2', task: "Garis Bawah (Alternatif)", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '4'], macKeys: ['Cmd', '4'], keywords: ['underline', 'garis bawah'] },
+                { id: 'strikethrough', task: "Coret Teks (Strikethrough)", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '5'], macKeys: ['Cmd', 'Shift', 'X'], keywords: ['strikethrough', 'coret'] },
+                { id: 'toggleObjects', task: "Tampil/Sembunyikan Objek", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '6'], macKeys: [''], keywords: ['show hide objects', 'sembunyikan objek'] },
+                { id: 'toggleToolbar', task: "Tampil/Sembunyikan Toolbar", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '7'], macKeys: [''], keywords: ['show hide toolbar', 'sembunyikan toolbar'] },
+                { id: 'toggleOutline', task: "Tampil/Sembunyikan Simbol Outline", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '8'], macKeys: ['Cmd', '8'], keywords: ['toggle outline symbols', 'outline'] },
+                { id: 'formatCells', task: "Buka Format Cells", category: "Format", subCategory: 'ctrlNum', winKeys: ['Ctrl', '1'], macKeys: ['Cmd', '1'], keywords: ['format cells'] },
+                { id: 'createTable', task: "Membuat Tabel", category: "Format", subCategory: 'other', winKeys: ['Ctrl', 'T'], macKeys: ['Cmd', 'T'], keywords: ['create table', 'buat tabel'] },
+                { id: 'autofitCol', task: "AutoFit Lebar Kolom", category: "Format", subCategory: 'alt', winKeys: ['Alt', 'H', 'O', 'I'], macKeys: [''], keywords: ['autofit column', 'lebar kolom otomatis'] },
+                
+                // Kategori: Rumus
+                { id: 'insertDate', task: "Memasukkan Tanggal Hari Ini", category: "Rumus", subCategory: 'other', winKeys: ['Ctrl', ';'], macKeys: ['Control', ';'], keywords: ['tanggal', 'date'] },
+                { id: 'insertChart', task: "Membuat Grafik Cepat", category: "Rumus", subCategory: 'alt', winKeys: ['Alt', 'F1'], macKeys: ['Fn', 'Option', 'F1'], keywords: ['chart', 'grafik'] },
+                { id: 'saveAs', task: "Save As", category: "Rumus", subCategory: 'alt', winKeys: ['Alt', 'F2'], macKeys: ['Fn', 'Option', 'F2'], keywords: ['save as'] },
+                
+                /// Kategori: Fungsi - Lookup
+                { id: 'vlookup', task: "Mencari Data Vertikal (VLOOKUP)", category: "Fungsi", subCategory: 'lookup', winKeys: ['Fungsi'], macKeys: ['Fungsi'], keywords: ['vlookup', 'cari data', 'lookup', 'vertikal'] },
+                { id: 'hlookup', task: "Mencari Data Horizontal (HLOOKUP)", category: "Fungsi", subCategory: 'lookup', winKeys: ['Fungsi'], macKeys: ['Fungsi'], keywords: ['hlookup', 'cari data', 'lookup', 'horizontal'] },
+                { id: 'indexMatch', task: "Mencari Data dengan INDEX MATCH", category: "Fungsi", subCategory: 'lookup', winKeys: ['Fungsi'], macKeys: ['Fungsi'], keywords: ['index', 'match'] },
+                { id: 'xlookup', task: "Mencari Data Fleksibel (XLOOKUP)", category: "Fungsi", subCategory: 'lookup', winKeys: ['Fungsi'], macKeys: ['Fungsi'], keywords: ['xlookup', 'cari data', 'lookup'] },
+                { id: 'lookupMultiCriteria', task: "Lookup dengan Multi Kriteria", category: "Fungsi", subCategory: 'lookup', winKeys: ['Fungsi'], macKeys: ['Fungsi'], keywords: ['multi kriteria', 'banyak syarat', 'filter', 'advanced lookup'] },
+
+                // Kategori: Fungsi - Teks
+                { id: 'left', task: "Ambil Teks dari Kiri (LEFT)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['left', 'kiri', 'ambil teks']},
+                { id: 'right', task: "Ambil Teks dari Kanan (RIGHT)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['right', 'kanan', 'ambil teks']},
+                { id: 'mid', task: "Ambil Teks dari Tengah (MID)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['mid', 'tengah', 'ambil teks']},
+                { id: 'len', task: "Hitung Panjang Karakter (LEN)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['len', 'panjang', 'hitung karakter']},
+                { id: 'trim', task: "Hapus Spasi Berlebih (TRIM)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['trim', 'hapus spasi', 'cleaning data']},
+                { id: 'upper', task: "Huruf Besar Semua (UPPER)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['upper', 'kapital', 'huruf besar']},
+                { id: 'lower', task: "Huruf Kecil Semua (LOWER)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['lower', 'huruf kecil']},
+                { id: 'proper', task: "Kapital di Awal Kata (PROPER)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['proper', 'awal kata', 'kapital depan']},
+                { id: 'concat', task: "Gabung Teks (CONCAT)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['concat', 'concatenate', 'gabung teks']},
+                { id: 'substitute', task: "Ganti Teks (SUBSTITUTE)", category: "Fungsi", subCategory: 'teks', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['substitute', 'replace', 'ganti teks']},
+              
+                // Kategori: Fungsi - Tanggal & Waktu
+                { id: 'today', task: "Tanggal Hari Ini (TODAY)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['today', 'tanggal hari ini', 'sekarang']},
+                { id: 'now', task: "Tanggal & Waktu Sekarang (NOW)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['now', 'waktu sekarang', 'jam']},
+                { id: 'year', task: "Ambil Tahun dari Tanggal (YEAR)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['year', 'tahun']},
+                { id: 'month', task: "Ambil Bulan dari Tanggal (MONTH)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['month', 'bulan']},
+                { id: 'day', task: "Ambil Hari dari Tanggal (DAY)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['day', 'hari']},
+                { id: 'datedif', task: "Hitung Selisih Tanggal (DATEDIF)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['datedif', 'selisih tanggal', 'durasi']},
+                { id: 'networkdays', task: "Hitung Hari Kerja (NETWORKDAYS)", category: "Fungsi", subCategory: 'tanggal', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['networkdays', 'hari kerja']},
+
+                // Kategori: Fungsi - Keuangan
+                { id: 'pmt', task: "Hitung Cicilan Pinjaman (PMT)", category: "Fungsi", subCategory: 'keuangan', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['pmt', 'cicilan', 'pinjaman', 'kredit']},
+                { id: 'fv', task: "Nilai Masa Depan Investasi (FV)", category: "Fungsi", subCategory: 'keuangan', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['fv', 'future value', 'investasi']},
+                { id: 'npv', task: "Net Present Value (NPV)", category: "Fungsi", subCategory: 'keuangan', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['npv', 'net present value', 'arus kas']},
+                { id: 'irr', task: "Internal Rate of Return (IRR)", category: "Fungsi", subCategory: 'keuangan', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['irr', 'internal rate of return', 'investasi']},
+
+                // Kategori: Fungsi - Statistik & Analisis
+                { id: 'autoSum', task: "Menjumlahkan Otomatis (SUM)", category: "Fungsi", subCategory: 'statistik', winKeys: ['Alt', '='], macKeys: ['Cmd', 'Shift', 'T'], keywords: ['autosum', 'sum'] },
+                { id: 'average', task: "Menghitung Rata-rata (AVERAGE)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['average', 'rata-rata']},
+                { id: 'sumif', task: "Menjumlahkan dg Kriteria (SUMIF)", category: "Fungsi", subCategory: 'statistik', winKeys: ['Fungsi'], macKeys: ['Fungsi'], keywords: ['sumif', 'jumlah jika'] },
+                { id: 'averageif', task: "Rata-rata dg Kriteria (AVERAGEIF)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['averageif', 'rata-rata jika']},
+                { id: 'countif', task: "Menghitung dg Kriteria (COUNTIF)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['countif', 'hitung jika']},
+                { id: 'count', task: "Menghitung Sel Angka (COUNT)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['count', 'hitung angka']},
+                { id: 'counta', task: "Menghitung Sel Terisi (COUNTA)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['counta', 'hitung semua']},
+                { id: 'max', task: "Mencari Nilai Terbesar (MAX)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['max', 'terbesar']},
+                { id: 'min', task: "Mencari Nilai Terkecil (MIN)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['min', 'terkecil']},
+                { id: 'pivot', task: "Master Ringkasan Data (Pivot Table)", category: "Fungsi", subCategory: 'statistik', winKeys:['Fitur'], macKeys:['Fitur'], keywords:['pivot', 'ringkasan', 'summary']},
+                
+                // Kategori: Fungsi - Logika
+                { id: 'if', task: "Logika JIKA (IF)", category: "Fungsi", subCategory: 'logika', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['if', 'jika', 'logika']}
+                ,
+                { id: 'ifs', task: "Logika JIKA Bertingkat (IFS)", category: "Fungsi", subCategory: 'logika', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['ifs', 'jika bertingkat', 'banyak kondisi']},
+                { id: 'and', task: "Logika DAN (AND)", category: "Fungsi", subCategory: 'logika', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['and', 'dan', 'semua kondisi']},
+                { id: 'or', task: "Logika ATAU (OR)", category: "Fungsi", subCategory: 'logika', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['or', 'atau', 'salah satu kondisi']},
+                { id: 'iferror', task: "Penanganan Error (IFERROR)", category: "Fungsi", subCategory: 'logika', winKeys:['Fungsi'], macKeys:['Fungsi'], keywords: ['iferror', 'error handling', 'jika error']},
+            
+            ];
+            
+            // --- ELEMEN DOM ---
+            const searchInput = document.getElementById('searchInput');
+            const sotdContainer = document.getElementById('sotd-container');
+            const winButton = document.getElementById('winButton');
+            const macButton = document.getElementById('macButton');
+            const modal = document.getElementById('practice-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const excelContainer = document.getElementById('excel-simulation-container');
+            const instructionText = document.getElementById('instruction-text');
+            const feedbackBox = document.getElementById('feedback-box');
+            const formulaInputContainer = document.getElementById('formula-input-container');
+            const formulaInput = document.getElementById('formula-input');
+            const submitFormulaBtn = document.getElementById('submit-formula-btn');
+            const showAnswerBtn = document.getElementById('show-answer-btn');
+            const formulaBreakdownContainer = document.getElementById('formula-breakdown-container');
+            const tabSwitcher = document.getElementById('tab-switcher');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            const dasarNoResults = document.getElementById('dasar-no-results');
+            const fungsiResultsContainer = document.getElementById('fungsi-results-container');
+            const fungsiNoResults = document.getElementById('fungsi-no-results');
+            const scoreDisplay = document.getElementById('score');
+            const openBadgesBtn = document.getElementById('open-badges-btn');
+            const badgesModal = document.getElementById('badges-modal');
+            const closeBadgesModalBtn = document.getElementById('close-badges-modal-btn');
+            const badgesContainer = document.getElementById('badges-container');
+            const toast = document.getElementById('toast-notification');
+            const startChallengeBtn = document.getElementById('start-challenge-btn');
+            const challengeModal = document.getElementById('challenge-modal');
+            const explainFormulaBtn = document.getElementById('explain-formula-btn');
+            const geminiExplanationContainer = document.getElementById('gemini-explanation-container');
+            const openLearningPathBtn = document.getElementById('open-learning-path-btn');
+            const learningPathModal = document.getElementById('learning-path-modal');
+            const closeLearningPathModalBtn = document.getElementById('close-learning-path-modal-btn');
+            const learningPathContainer = document.getElementById('learning-path-container');
+            
+            const startCaseStudyBtn = document.getElementById('start-case-study-btn');
+            const caseStudyModal = document.getElementById('case-study-modal');
+            const closeCaseStudyBtn = document.getElementById('close-case-study-btn');
+            const caseStudyStepsContainer = document.getElementById('case-study-steps-container');
+            const caseStudyInstructionText = document.getElementById('case-study-instruction-text');
+            const caseStudyGridContainer = document.getElementById('case-study-grid-container');
+            const caseStudyFormulaContainer = document.getElementById('case-study-formula-container');
+            const caseStudyFormulaInput = document.getElementById('case-study-formula-input');
+            const caseStudySubmitBtn = document.getElementById('case-study-submit-btn');
+            const caseStudyFeedbackBox = document.getElementById('case-study-feedback-box');
+            // --- STATE APLIKASI ---
+            let currentOS = 'win';
+            let activeTab = 'dasar';
+            let activeCell = { row: 2, col: 2 }; 
+            let currentPractice = null; 
+            let practiceKeyDownHandler = null; 
+            let clipboard = '';
+            let userData = {
+                score: 0,
+                challengeHighScore: 0,
+                completed: [],
+                badges: []
+            };
+
+            // --- FUNGSI-FUNGSI UTAMA---
+
+            const createKeyElement = (key) => {
+                if (key === 'Fungsi' || key === 'Fitur') {
+                    return `<span class="key-func">${key}</span>`;
+                }
+                const keyArray = key.split(' ');
+                if (keyArray.length > 1) {
+                    return keyArray.map(k => `<span class="key ${k.length > 4 || k.includes('Panah') ? 'key-lg' : ''}">${k}</span>`).join(' > ');
+                }
+                return `<span class="key ${key.length > 4 || key.includes('Panah') ? 'key-lg' : ''}">${key}</span>`;
+            };
+
+            const createShortcutCard = (shortcut, isSotd = false) => {
+                const keys = currentOS === 'win' ? shortcut.winKeys : shortcut.macKeys;
+                const keysHTML = keys.map(createKeyElement).join(' + ');
+                const cardClasses = isSotd ? "bg-blue-900/50 border-2 border-blue-500 rounded-lg p-5 flex flex-col justify-between transform scale-105 shadow-2xl" : "bg-slate-800 border border-slate-700 rounded-lg p-5 flex flex-col justify-between hover:border-blue-500 hover:-translate-y-1 transition-all duration-200";
+                const isPracticeAvailable = practiceScenarios.hasOwnProperty(shortcut.id);
+                
+                return `
+                    <div class="${cardClasses}" data-shortcut-id="${shortcut.id}">
+                        <div>
+                            <span class="inline-block ${['Fungsi', 'Rumus'].includes(shortcut.category) ? 'bg-green-600' : 'bg-slate-700'} text-slate-200 text-xs font-medium px-2.5 py-1 rounded-full mb-3">${shortcut.category}</span>
+                            <h3 class="text-white font-semibold text-lg mb-2">${shortcut.task}</h3>
+                        </div>
+                        <div class="mt-4 flex flex-col gap-3">
+                            <div class="text-center bg-slate-900/50 p-3 rounded-md">${keysHTML}</div>
+                            <button class="practice-btn w-full bg-blue-600 text-white font-semibold py-2 rounded-md ${isPracticeAvailable ? 'hover:bg-blue-500' : 'opacity-50 cursor-not-allowed'} transition-colors flex items-center justify-center gap-2 text-sm" ${!isPracticeAvailable ? 'disabled' : ''}>
+                                <i data-lucide="play-circle" class="w-4 h-4"></i> Coba Interaktif
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            const renderShortcuts = (shortcutsToRender) => {
+                const isFunction = (s) => ['Fungsi', 'Rumus'].includes(s.category);
+                const dasarItems = shortcutsToRender.filter(s => !isFunction(s));
+                const fungsiItems = shortcutsToRender.filter(s => isFunction(s));
+
+                const renderCategory = (items, containerId, noResultsId, subCategories) => {
+                    let hasContent = false;
+                    for(const subCat in subCategories) {
+                        const subCatItems = items.filter(i => i.subCategory === subCat);
+                        const container = document.getElementById(subCategories[subCat]);
+                        container.innerHTML = '';
+                        if (subCatItems.length > 0) {
+                            hasContent = true;
+                            subCatItems.forEach(item => container.innerHTML += createShortcutCard(item));
+                        }
+                    }
+                    document.getElementById(noResultsId).classList.toggle('hidden', hasContent);
+                };
+
+                renderCategory(dasarItems, 'dasar-content', 'dasar-no-results', {
+                    'other': 'other-results-container',
+                    'ctrlNum': 'ctrl-num-results-container',
+                    'alt': 'alt-results-container'
+                });
+
+                renderCategory(fungsiItems, 'fungsi-content', 'fungsi-no-results', {
+                    'lookup': 'lookup-results-container',
+                    'statistik': 'statistik-results-container',
+                    'logika': 'logika-results-container',
+                    'teks': 'teks-results-container',
+                    'tanggal': 'tanggal-results-container',
+                    'keuangan': 'keuangan-results-container'
+                });
+
+                lucide.createIcons();
+                document.querySelectorAll('.practice-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const shortcutId = e.target.closest('[data-shortcut-id]').dataset.shortcutId;
+                        startPractice(shortcutId);
+                    });
+                });
+            };
+
+            const handleSearch = () => {
+                const query = searchInput.value.toLowerCase().trim();
+                const filtered = query === '' 
+                    ? shortcutsData
+                    : shortcutsData.filter(s => s.task.toLowerCase().includes(query) || s.keywords.some(k => k.toLowerCase().includes(query)));
+                renderShortcuts(filtered);
+            };
+
+            const switchOS = (os) => {
+                currentOS = os;
+                winButton.classList.toggle('bg-blue-600', os === 'win'); winButton.classList.toggle('text-white', os === 'win'); winButton.classList.toggle('bg-slate-700', os !== 'win');
+                macButton.classList.toggle('bg-blue-600', os === 'mac'); macButton.classList.toggle('text-white', os === 'mac'); macButton.classList.toggle('bg-slate-700', os !== 'mac');
+                handleSearch();
+                displayShortcutOfTheDay(); 
+            };
+            
+            const displayShortcutOfTheDay = () => {
+                const randomIndex = new Date().getDate() % shortcutsData.length;
+                const sotd = shortcutsData[randomIndex];
+                sotdContainer.innerHTML = `<h2 class="text-lg font-semibold text-blue-300 mb-3 flex items-center gap-2"><i data-lucide="sparkles" class="w-5 h-5"></i>Pintasan Hari Ini</h2>${createShortcutCard(sotd, true)}`;
+                lucide.createIcons();
+                sotdContainer.querySelector('.practice-btn').addEventListener('click', (e) => startPractice(e.target.closest('[data-shortcut-id]').dataset.shortcutId));
+            };
+
+            // --- FUNGSI-FUNGSI LATIHAN INTERAKTIF ---
+
+            const colNumToLetter = (col) => {
+                let temp, letter = '';
+                while (col > 0) {
+                    temp = (col - 1) % 26;
+                    letter = String.fromCharCode(temp + 65) + letter;
+                    col = (col - temp - 1) / 26;
+                }
+                return letter;
+            };
+
+            const generateExcelGrid = (rows, cols, containerElement) => {
+                let gridHTML = `<div class="excel-grid" style="grid-template-columns: 40px repeat(${cols}, 1fr);">`;
+                gridHTML += '<div class="grid-cell grid-header"></div>';
+                for (let c = 0; c < cols; c++) gridHTML += `<div class="grid-cell grid-header">${colNumToLetter(c + 1)}</div>`;
+                for (let r = 0; r < rows; r++) {
+                    gridHTML += `<div class="grid-cell grid-header">${r + 1}</div>`;
+                    for (let c = 0; c < cols; c++) gridHTML += `<div class="grid-cell" data-row="${r+1}" data-col="${c+1}"></div>`;
+                }
+                gridHTML += '</div>';
+                containerElement.innerHTML = gridHTML;
+                updateActiveCell(containerElement);
+                return containerElement.querySelector('.excel-grid');
+            };
+
+            const updateActiveCell = (context = document) => {
+                context.querySelectorAll('.grid-cell.active').forEach(c => c.classList.remove('active'));
+                const cell = context.querySelector(`.grid-cell[data-row="${activeCell.row}"][data-col="${activeCell.col}"]`);
+                if (cell) cell.classList.add('active');
+            };
+
+            const populateGrid = (data, context = document) => {
+                data.forEach(item => {
+                    const cell = context.querySelector(`.grid-cell[data-row="${item.r}"][data-col="${item.c}"]`);
+                    if (cell) cell.textContent = item.t;
+                });
+            };
+
+            const showFeedback = (message, isSuccess) => {
+                feedbackBox.textContent = message;
+                feedbackBox.className = 'mt-4 p-3 rounded-md text-center font-semibold';
+                feedbackBox.classList.add(isSuccess ? 'bg-green-500/20' : 'bg-red-500/20', isSuccess ? 'text-green-300' : 'text-red-300');
+                feedbackBox.classList.remove('hidden');
+            };
+
+            const cleanupPracticeModal = () => {
+                if (practiceKeyDownHandler) {
+                    document.removeEventListener('keydown', practiceKeyDownHandler);
+                    practiceKeyDownHandler = null;
+                }
+                isSelecting = false;
+                if (excelContainer.mouseUpHandler) {
+                    window.removeEventListener('mouseup', excelContainer.mouseUpHandler);
+                    excelContainer.mouseUpHandler = null;
+                }
+                if (caseStudyGridContainer.mouseUpHandler) {
+                    window.removeEventListener('mouseup', caseStudyGridContainer.mouseUpHandler);
+                    caseStudyGridContainer.mouseUpHandler = null;
+                }
+            };
+
+            const startPractice = (shortcutId) => {
+                currentPractice = practiceScenarios[shortcutId];
+                if (!currentPractice) return;
+
+                if (currentPractice.type === 'case-study') {
+                    startCaseStudy(shortcutId);
+                    return;
+                }
+
+                currentPractice.id = shortcutId;
+                modal.classList.remove('hidden');
+                instructionText.textContent = currentPractice.instruction;
+                feedbackBox.classList.add('hidden');
+                geminiExplanationContainer.classList.add('hidden');
+                geminiExplanationContainer.innerHTML = '';
+                
+                generateExcelGrid(15, 6, excelContainer);
+                activeCell = { row: 3, col: 3 }; // Reset
+                if(currentPractice.setup) currentPractice.setup(modal); // <-- PERUBAHAN: lewatkan 'modal' sebagai konteks
+                updateActiveCell(modal); // <-- PERUBAHAN: lewatkan 'modal' sebagai konteks
+
+                if (currentPractice.formulaBreakdown) {
+                    document.getElementById('formula-syntax').textContent = currentPractice.formulaBreakdown.syntax;
+                    const partsContainer = document.getElementById('formula-parts');
+                    partsContainer.innerHTML = currentPractice.formulaBreakdown.parts
+                        .map(part => `<p><code class="bg-slate-600 px-1.5 py-0.5 rounded">${part.term}</code>: ${part.def}</p>`)
+                        .join('');
+                    formulaBreakdownContainer.classList.remove('hidden');
+                    explainFormulaBtn.classList.remove('hidden');
+                } else {
+                    formulaBreakdownContainer.classList.add('hidden');
+                    explainFormulaBtn.classList.add('hidden');
+                }
+                lucide.createIcons();
+
+                if (currentPractice.type === 'formula') {
+                    formulaInputContainer.classList.remove('hidden');
+                    formulaInput.value = '';
+                    formulaInput.focus();
+                    if (practiceKeyDownHandler) document.removeEventListener('keydown', practiceKeyDownHandler);
+                } else {
+                    formulaInputContainer.classList.add('hidden');
+                    if (practiceKeyDownHandler) document.removeEventListener('keydown', practiceKeyDownHandler);
+                    practiceKeyDownHandler = (e) => {
+                        e.preventDefault();
+                        if (currentPractice && currentPractice.check(e)) {
+                           completePractice(currentPractice.id);
+                        }
+                    };
+                    document.addEventListener('keydown', practiceKeyDownHandler);
+                }
+            };
+
+            const normalizeFormula = (formula) => formula.replace(/\s+/g, '').toLowerCase();
+
+            // --- SKENARIO LATIHAN ---
+            // --- SKENARIO LATIHAN ---
+            let previousState = {};
+            const practiceScenarios = {
+                'copy': { type:'shortcut', instruction: "Klik sel B2, lalu tekan shortcut untuk menyalin.", setup: (modalContext) => { populateGrid([{r:2, c:2, t:'Salin Saya'}], modalContext); activeCell = {row:2, col:2}; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key.toLowerCase() === 'c', action: () => { clipboard = document.querySelector('.grid-cell.active').textContent; } },
+                'paste': { type:'shortcut', instruction: "Klik sel C3, lalu tekan shortcut untuk menempelkan.", setup: () => { clipboard = 'Teks Disalin!'; activeCell = {row:3, col:3}; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key.toLowerCase() === 'v', action: () => { document.querySelector('.grid-cell.active').textContent = clipboard; } },
+                'undo': { type: 'shortcut', instruction: "Tekan shortcut untuk membatalkan perubahan teks.", setup: (modalContext) => { const cell = modalContext.querySelector('.grid-cell[data-row="2"][data-col="2"]'); previousState = { cell, text: 'Teks Asli' }; cell.textContent = 'Teks Berubah'; activeCell = {row:2, col:2}; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key.toLowerCase() === 'z', action: () => { previousState.cell.textContent = previousState.text; } },
+                'jumpEdge': { type: 'shortcut', instruction: "Dari sel A1, tekan shortcut untuk lompat ke A4 (ujung data).", setup: (modalContext) => { populateGrid([{r:1,c:1,t:'Data1'},{r:2,c:1,t:'Data2'},{r:3,c:1,t:'Data3'},{r:4,c:1,t:'Data4'},{r:6,c:1,t:'Data5'}], modalContext); activeCell = {row:1, col:1}; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key === 'ArrowDown', action: () => { activeCell = {row:4, col:1}; updateActiveCell(modal); } },
+                'selectCol': { type: 'shortcut', instruction: "Klik di mana saja di kolom B, lalu tekan shortcut untuk memilih seluruh kolom.", setup: () => { activeCell = {row:3, col:2}; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : (e.ctrlKey && !e.metaKey)) && e.key === ' ', action: () => { for(let r=1; r<=15; r++) modal.querySelector(`.grid-cell[data-row="${r}"][data-col="2"]`)?.classList.add('selected'); } },
+                'selectRow': { type: 'shortcut', instruction: "Klik di mana saja di baris 4, lalu tekan shortcut untuk memilih seluruh baris.", setup: () => { activeCell = {row:4, col:3}; }, check: (e) => e.shiftKey && e.key === ' ', action: () => { for(let c=1; c<=6; c++) modal.querySelector(`.grid-cell[data-row="4"][data-col="${c}"]`)?.classList.add('selected'); } },
+                'hideCols': { type: 'shortcut', instruction: "Pilih kolom B, lalu tekan shortcut untuk menyembunyikannya.", setup: () => { activeCell = {row:1, col:2}; updateActiveCell(modal); }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key === '0', action: () => { modal.querySelector('.excel-grid').style.gridTemplateColumns = `40px 1fr 0px repeat(4, 1fr)`; modal.querySelectorAll(`[data-col="2"]`).forEach(c => c.classList.add('hidden-col')); } },
+                'hideRows': { type: 'shortcut', instruction: "Pilih baris 3, lalu tekan shortcut untuk menyembunyikannya.", setup: () => { activeCell = {row:3, col:1}; updateActiveCell(modal); }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key === '9', action: () => { modal.querySelectorAll(`[data-row="3"]`).forEach(c => c.classList.add('hidden-row')); } },
+                'formatCells': { type: 'shortcut', instruction: "Tekan shortcut untuk membuka dialog Format Cells (simulasi).", check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key === '1', action: () => { showFeedback("Dialog Format Cells akan muncul di sini.", true); } },
+                'createTable': { type: 'shortcut', instruction: "Pilih rentang A1:C4, lalu tekan shortcut untuk membuat tabel.", setup: (modalContext) => { populateGrid([{r:1,c:1,t:'ID'},{r:1,c:2,t:'Produk'},{r:1,c:3,t:'Stok'},{r:2,c:1,t:'A1'},{r:2,c:2,t:'Buku'},{r:2,c:3,t:10},{r:3,c:1,t:'A2'},{r:3,c:2,t:'Pulpen'},{r:3,c:3,t:20},{r:4,c:1,t:'A3'},{r:4,c:2,t:'Pensil'},{r:4,c:3,t:15}], modalContext); activeCell = {row:1, col:1}; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key.toLowerCase() === 't', action: () => { for(let r=1; r<=4; r++) { for(let c=1; c<=3; c++) { const cell = modal.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`); if(r===1) cell.classList.add('table-header'); else if (r % 2 !== 0) cell.classList.add('table-row-alt'); } } } },
+                'bold': { type:'shortcut', instruction: "Tekan shortcut untuk membuat teks di sel aktif menjadi tebal.", setup: (modalContext) => { modalContext.querySelector(`.grid-cell[data-row="${activeCell.row}"][data-col="${activeCell.col}"]`).textContent = "Teks Ini"; }, check: (e) => (currentOS === 'win' ? e.ctrlKey : e.metaKey) && e.key.toLowerCase() === 'b', action: () => { modal.querySelector('.grid-cell.active').style.fontWeight = 'bold'; } },
+                'vlookup': {
+                    type: 'formula',
+                    instruction: "Di sel F2, gunakan VLOOKUP untuk mencari 'Harga' dari ID 'EL-02', berdasarkan Tabel Referensi (A1:D6).",
+                    setup: (modalContext) => {
+                        const refData = [
+                            {r:1,c:1,t:'ID'}, {r:1,c:2,t:'Produk'}, {r:1,c:3,t:'Harga'}, {r:1,c:4,t:'Stok'},
+                            {r:2,c:1,t:'BK-01'}, {r:2,c:2,t:'Buku Tulis'}, {r:2,c:3,t:'5000'}, {r:2,c:4,t:'120'},
+                            {r:3,c:1,t:'EL-01'}, {r:3,c:2,t:'Mouse'}, {r:3,c:3,t:'150000'}, {r:3,c:4,t:'45'},
+                            {r:4,c:1,t:'EL-02'}, {r:4,c:2,t:'Monitor'}, {r:4,c:3,t:'1200000'}, {r:4,c:4,t:'20'},
+                            {r:5,c:1,t:'AT-01'}, {r:5,c:2,t:'Pulpen'}, {r:5,c:3,t:'3000'}, {r:5,c:4,t:'250'},
+                            {r:6,c:1,t:'EL-03'}, {r:6,c:2,t:'Keyboard'}, {r:6,c:3,t:'250000'}, {r:6,c:4,t:'30'},
+                        ];
+                        const mainData = [{r:1,c:5,t:'Cari ID'}, {r:2,c:5,t:'EL-02'}, {r:1,c:6,t:'Hasil'}];
+                        populateGrid([...refData, ...mainData], modalContext);
+                        activeCell = { row: 2, col: 6 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'vlookup(e2,a1:d6,3,false)' || normalizeFormula(formula) === 'vlookup(e2,a1:d6,3,0)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "1200000"; cell.classList.add('cell-flash'); },
+                    answerKey: '=VLOOKUP(E2,A1:D6,3,0)',
+                    formulaBreakdown: {
+                        syntax: "=VLOOKUP(nilai_dicari, tabel_referensi, nomor_kolom, 0)",
+                        parts: [
+                            { term: 'nilai_dicari', def: 'Sel acuan yang ingin Anda cari (misal: E2).' },
+                            { term: 'tabel_referensi', def: 'Seluruh rentang tabel data (misal: A1:D6). Kunci pencarian HARUS di kolom pertama.' },
+                            { term: 'nomor_kolom', def: 'Kolom ke-berapa yang datanya mau diambil (dihitung dari kiri).' },
+                            { term: '0 atau FALSE', def: 'Untuk mencari kecocokan yang pasti (paling umum digunakan).' }
+                        ]
+                    }
+                },
+                'hlookup': {
+                    type: 'formula',
+                    instruction: "Di sel C12, gunakan HLOOKUP untuk mencari 'Stok' dari 'Monitor', berdasarkan Tabel Referensi (A8:E10).",
+                    setup: (modalContext) => {
+                        const refData = [
+                            {r:8,c:1,t:'Produk'}, {r:8,c:2,t:'Buku'}, {r:8,c:3,t:'Monitor'}, {r:8,c:4,t:'Mouse'}, {r:8,c:5,t:'Keyboard'},
+                            {r:9,c:1,t:'Harga'}, {r:9,c:2,t:'5000'}, {r:9,c:3,t:'1200000'}, {r:9,c:4,t:'150000'}, {r:9,c:5,t:'250000'},
+                            {r:10,c:1,t:'Stok'}, {r:10,c:2,t:'120'}, {r:10,c:3,t:'20'}, {r:10,c:4,t:'45'}, {r:10,c:5,t:'30'}
+                        ];
+                        const mainData = [{r:11,c:2,t:'Cari Produk'}, {r:12,c:2,t:'Monitor'}, {r:11,c:3,t:'Hasil'}];
+                        populateGrid([...refData, ...mainData], modalContext);
+                        activeCell = { row: 12, col: 3 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'hlookup(b12,a8:e10,3,false)' || normalizeFormula(formula) === 'hlookup(b12,a8:e10,3,0)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "20"; cell.classList.add('cell-flash'); },
+                    answerKey: '=HLOOKUP(B12,A8:E10,3,0)',
+                    formulaBreakdown: {
+                        syntax: "=HLOOKUP(nilai_dicari, tabel_referensi, nomor_baris, 0)",
+                        parts: [
+                            { term: 'nilai_dicari', def: 'Sel acuan yang ingin Anda cari (misal: B12).' },
+                            { term: 'tabel_referensi', def: 'Seluruh rentang tabel data (misal: A8:E10). Kunci pencarian HARUS di baris pertama.' },
+                            { term: 'nomor_baris', def: 'Baris ke-berapa yang datanya mau diambil (dihitung dari atas).' },
+                            { term: '0 atau FALSE', def: 'Untuk mencari kecocokan yang pasti.' }
+                        ]
+                    }
+                },
+                'indexMatch': {
+                    type: 'formula',
+                    instruction: "Di sel F2, gunakan INDEX MATCH untuk mencari 'ID' dari Produk 'Monitor' (mencari ke kiri).",
+                    setup: (modalContext) => {
+                        practiceScenarios.vlookup.setup(modalContext); // reuse vlookup data
+                        populateGrid([{r:1,c:5,t:'Cari Produk'}, {r:2,c:5,t:'Monitor'}, {r:1,c:6,t:'Hasil'}], modalContext);
+                        activeCell = { row: 2, col: 6 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'index(a2:a6,match(e2,b2:b6,0))',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "EL-02"; cell.classList.add('cell-flash'); },
+                    answerKey: '=INDEX(A2:A6,MATCH(E2,B2:B6,0))',
+                    formulaBreakdown: {
+                        syntax: "=INDEX(kolom_hasil, MATCH(nilai_dicari, kolom_cari, 0))",
+                        parts: [
+                             { term: 'kolom_hasil', def: 'Kolom yang berisi jawaban akhir (misal: A2:A6).' },
+                             { term: 'MATCH(...)', def: 'Bagian ini mencari posisi baris.'},
+                             { term: 'nilai_dicari', def: 'Sel acuan (E2: "Monitor").' },
+                             { term: 'kolom_cari', def: 'Kolom tempat mencari nilai acuan (B2:B6).' },
+                             { term: '0', def: 'Untuk mencari kecocokan yang pasti.'}
+                        ]
+                    }
+                },
+                'xlookup': {
+                    type: 'formula',
+                    instruction: "Di sel F2, gunakan XLOOKUP untuk mencari 'Harga' dari ID 'EL-02'.",
+                    setup: (modalContext) => practiceScenarios.vlookup.setup(modalContext),
+                    check: (formula) => normalizeFormula(formula) === 'xlookup(e2,a2:a6,c2:c6)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "1200000"; cell.classList.add('cell-flash'); },
+                    answerKey: '=XLOOKUP(E2,A2:A6,C2:C6)',
+                    formulaBreakdown: {
+                        syntax: "=XLOOKUP(nilai_dicari, kolom_cari, kolom_hasil)",
+                        parts: [
+                            { term: 'nilai_dicari', def: 'Sel acuan yang ingin Anda cari (misal: E2).' },
+                            { term: 'kolom_cari', def: 'HANYA rentang kolom tempat mencari (misal: A2:A6).' },
+                            { term: 'kolom_hasil', def: 'HANYA rentang kolom tempat mengambil hasil (misal: C2:C6).' }
+                        ]
+                    }
+                },
+                 'xlookup_left': {
+                    type: 'formula',
+                    instruction: "Di sel F2, gunakan XLOOKUP untuk mencari 'ID' dari Produk 'Monitor' (mencari ke kiri).",
+                    setup: (modalContext) => {
+                        practiceScenarios.vlookup.setup(modalContext); // reuse vlookup data
+                        populateGrid([{r:1,c:5,t:'Cari Produk'}, {r:2,c:5,t:'Monitor'}, {r:1,c:6,t:'Hasil'}], modalContext);
+                        activeCell = { row: 2, col: 6 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'xlookup(e2,b2:b6,a2:a6)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "EL-02"; cell.classList.add('cell-flash'); },
+                    answerKey: '=XLOOKUP(E2,B2:B6,A2:A6)',
+                    formulaBreakdown: {
+                        syntax: "=XLOOKUP(nilai_dicari, kolom_cari, kolom_hasil)",
+                        parts: [
+                             { term: 'nilai_dicari', def: 'Sel acuan (E2: "Monitor").' },
+                            { term: 'kolom_cari', def: 'Kolom Produk tempat mencari (B2:B6).' },
+                            { term: 'kolom_hasil', def: 'Kolom ID yang mau diambil hasilnya (A2:A6). XLOOKUP bisa mencari ke kiri!' }
+                        ]
+                    }
+                },
+                 'sumif': {
+                    type: 'formula',
+                    instruction: "Di sel F2, gunakan SUMIF untuk menjumlahkan 'Stok' semua produk dengan Kategori 'Elektronik'.",
+                    setup: (modalContext) => {
+                         const refData = [
+                            {r:1,c:1,t:'Kategori'}, {r:1,c:2,t:'Produk'}, {r:1,c:3,t:'Stok'},
+                            {r:2,c:1,t:'ATK'}, {r:2,c:2,t:'Buku Tulis'}, {r:2,c:3,t:'120'},
+                            {r:3,c:1,t:'Elektronik'}, {r:3,c:2,t:'Mouse'}, {r:3,c:3,t:'45'},
+                            {r:4,c:1,t:'Elektronik'}, {r:4,c:2,t:'Monitor'}, {r:4,c:3,t:'20'},
+                            {r:5,c:1,t:'ATK'}, {r:5,c:2,t:'Pulpen'}, {r:5,c:3,t:'250'},
+                            {r:6,c:1,t:'Elektronik'}, {r:6,c:2,t:'Keyboard'}, {r:6,c:3,t:'30'},
+                        ];
+                        const mainData = [{r:1,c:5,t:'Cari Kategori'}, {r:2,c:5,t:'Elektronik'}, {r:1,c:6,t:'Total Stok'}];
+                        populateGrid([...refData, ...mainData], modalContext);
+                        activeCell = { row: 2, col: 6 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'sumif(a2:a6,"elektronik",c2:c6)' || normalizeFormula(formula) === 'sumif(a2:a6,e2,c2:c6)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "95"; cell.classList.add('cell-flash'); },
+                    answerKey: '=SUMIF(A2:A6,E2,C2:C6)',
+                    formulaBreakdown: {
+                        syntax: '=SUMIF(rentang_kriteria, kriteria, rentang_jumlah)',
+                        parts: [
+                            { term: 'rentang_kriteria', def: 'Rentang sel yang akan dicek (misal: A2:A6).' },
+                            { term: 'kriteria', def: 'Syarat yang harus dipenuhi (misal: "Elektronik" atau sel E2).' },
+                            { term: 'rentang_jumlah', def: 'Rentang sel yang angkanya akan dijumlahkan (misal: C2:C6).' }
+                        ]
+                    }
+                },
+                'lookupMultiCriteria': {
+                    type: 'formula',
+                    instruction: "Di sel F3, cari 'Harga' untuk 'Kaos' dengan 'Ukuran' 'L'.",
+                    setup: (modalContext) => {
+                         const refData = [
+                            {r:1,c:1,t:'ID'}, {r:1,c:2,t:'Produk'}, {r:1,c:3,t:'Ukuran'},{r:1,c:4,t:'Harga'},
+                            {r:2,c:1,t:'P01'}, {r:2,c:2,t:'Kaos'}, {r:2,c:3,t:'M'},{r:2,c:4,t:'75000'},
+                            {r:3,c:1,t:'P02'}, {r:3,c:2,t:'Kaos'}, {r:3,c:3,t:'L'},{r:3,c:4,t:'80000'},
+                            {r:4,c:1,t:'P03'}, {r:4,c:2,t:'Kemeja'}, {r:4,c:3,t:'L'},{r:4,c:4,t:'150000'},
+                            {r:5,c:1,t:'P04'}, {r:5,c:2,t:'Kaos'}, {r:5,c:3,t:'M'},{r:5,c:4,t:'78000'},
+                        ];
+                        const mainData = [
+                            {r:1,c:5,t:'Kriteria 1'}, {r:1,c:6,t:'Kriteria 2'}, {r:1,c:7,t:'Hasil'},
+                            {r:2,c:5,t:'Produk'}, {r:2,c:6,t:'Ukuran'},
+                            {r:3,c:5,t:'Kaos'}, {r:3,c:6,t:'L'}
+                        ];
+                        populateGrid([...refData, ...mainData], modalContext);
+                        activeCell = { row: 3, col: 7 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'xlookup(1,(b2:b5=e3)*(c2:c5=f3),d2:d5)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "80000"; cell.classList.add('cell-flash'); },
+                    answerKey: '=XLOOKUP(1,(B2:B5=E3)*(C2:C5=F3),D2:D5)',
+                    formulaBreakdown: {
+                        syntax: '=XLOOKUP(1, (rentang1=kriteria1) * (rentang2=kriteria2), rentang_hasil)',
+                        parts: [
+                            { term: '1', def: 'Mencari hasil TRUE (benar) dari perkalian logika.' },
+                            { term: '(rentang1=kriteria1)', def: 'Kondisi pertama (misal: B2:B5=E3). Akan menghasilkan TRUE/FALSE.' },
+                            { term: '*', def: 'Simbol perkalian yang berfungsi sebagai operator logika "DAN" (AND).' },
+                            { term: '(rentang2=kriteria2)', def: 'Kondisi kedua (misal: C2:C5=F3).' },
+                            { term: 'rentang_hasil', def: 'Kolom tempat mengambil hasil jika semua kondisi TRUE (misal: D2:D5).' }
+                        ]
+                    }
+                },
+                'left': {
+                     type: 'formula',
+                    instruction: "Di sel C1, gunakan LEFT untuk mengambil 3 karakter pertama dari teks di A1.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'EXCEL-001'}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'left(a1,3)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "EXC"; cell.classList.add('cell-flash'); },
+                    answerKey: '=LEFT(A1,3)',
+                    formulaBreakdown: {
+                        syntax: "=LEFT(teks, jumlah_karakter)",
+                        parts: [ { term: 'teks', def: 'Sel yang berisi teks (A1).' }, { term: 'jumlah_karakter', def: 'Berapa banyak karakter yang diambil dari kiri (3).' } ]
+                    }
+                },
+                'right': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan RIGHT untuk mengambil 3 karakter terakhir dari teks di A1.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'EXCEL-001'}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'right(a1,3)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "001"; cell.classList.add('cell-flash'); },
+                    answerKey: '=RIGHT(A1,3)',
+                    formulaBreakdown: {
+                        syntax: "=RIGHT(teks, jumlah_karakter)",
+                        parts: [ { term: 'teks', def: 'Sel yang berisi teks (A1).' }, { term: 'jumlah_karakter', def: 'Berapa banyak karakter yang diambil dari kanan (3).' } ]
+                    }
+                },
+                'mid': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan MID untuk mengambil teks 'CEL' dari A1 (mulai dari karakter ke-3, sebanyak 3 huruf).",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'EXCEL-001'}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'mid(a1,3,3)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "CEL"; cell.classList.add('cell-flash'); },
+                    answerKey: '=MID(A1,3,3)',
+                    formulaBreakdown: {
+                        syntax: "=MID(teks, mulai_dari, jumlah_karakter)",
+                        parts: [ { term: 'teks', def: 'Sel yang berisi teks (A1).' }, { term: 'mulai_dari', def: 'Posisi karakter awal (3).' }, { term: 'jumlah_karakter', def: 'Berapa karakter yang diambil (3).' } ]
+                    }
+                },
+                'len': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan LEN untuk menghitung jumlah karakter di sel A1.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'Excel'}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'len(a1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "5"; cell.classList.add('cell-flash'); },
+                    answerKey: '=LEN(A1)',
+                    formulaBreakdown: {
+                        syntax: "=LEN(teks)",
+                        parts: [ { term: 'teks', def: 'Sel yang berisi teks yang ingin dihitung karakternya (A1).' } ]
+                    }
+                },
+                'trim': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan TRIM untuk membersihkan spasi berlebih dari teks di A1.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'   Excel   '}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'trim(a1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "Excel"; cell.classList.add('cell-flash'); },
+                    answerKey: '=TRIM(A1)',
+                    formulaBreakdown: {
+                        syntax: "=TRIM(teks)",
+                        parts: [ { term: 'teks', def: 'Sel yang berisi teks dengan spasi berlebih (A1).' } ]
+                    }
+                },
+                'upper': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan UPPER untuk membuat semua teks di A1 menjadi huruf besar.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'excel'}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'upper(a1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "EXCEL"; cell.classList.add('cell-flash'); },
+                    answerKey: '=UPPER(A1)',
+                    formulaBreakdown: { syntax: "=UPPER(teks)", parts: [ { term: 'teks', def: 'Sel yang teksnya ingin diubah ke huruf besar (A1).' } ] }
+                },
+                'concat': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan CONCAT untuk menggabungkan teks di A1 dan B1 (jangan lupa spasi).",
+                     setup: (modalContext) => { populateGrid([{r:1,c:1,t:'Budi'}, {r:1,c:2,t:'Santoso'}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'concat(a1,"",b1)' || normalizeFormula(formula) === 'concat(a1,"",b1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "Budi Santoso"; cell.classList.add('cell-flash'); },
+                    answerKey: '=CONCAT(A1," ",B1)',
+                    formulaBreakdown: {
+                        syntax: "=CONCAT(teks1, [teks2], ...)",
+                        parts: [ { term: 'teks1', def: 'Teks pertama (A1).' }, { term: '[teks2]', def: 'Teks kedua (B1), dst. Anda bisa menambahkan spasi " " di tengahnya.' } ]
+                    }
+                },
+                'substitute': {
+                    type: 'formula',
+                     instruction: "Di sel C1, gunakan SUBSTITUTE untuk mengganti kata 'Lama' menjadi 'Baru' pada teks di A1.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'Ini Data Lama'}, {r:1,c:3,t:''}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'substitute(a1,"lama","baru")',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "Ini Data Baru"; cell.classList.add('cell-flash'); },
+                    answerKey: '=SUBSTITUTE(A1,"Lama","Baru")',
+                    formulaBreakdown: {
+                        syntax: "=SUBSTITUTE(teks, teks_lama, teks_baru)",
+                        parts: [ { term: 'teks', def: 'Sel yang berisi teks (A1).' }, { term: 'teks_lama', def: 'Teks yang ingin Anda ganti ("Lama").' }, { term: 'teks_baru', def: 'Teks penggantinya ("Baru").' } ]
+                    }
+                },
+                'today': {
+                    type: 'formula',
+                     instruction: "Di sel A1, gunakan TODAY untuk menampilkan tanggal hari ini.",
+                    setup: () => { activeCell = {row:1, col:1}; },
+                    check: (formula) => normalizeFormula(formula) === 'today()',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); const d = new Date(); cell.textContent = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; cell.classList.add('cell-flash'); },
+                    answerKey: '=TODAY()',
+                    formulaBreakdown: { syntax: "=TODAY()", parts: [ { term: 'TODAY()', def: 'Fungsi ini tidak memerlukan argumen apapun di dalam kurung.' } ] }
+                },
+                'now': {
+                    type: 'formula',
+                    instruction: "Di sel A1, gunakan NOW untuk menampilkan tanggal & waktu sekarang.",
+                     setup: () => { activeCell = {row:1, col:1}; },
+                    check: (formula) => normalizeFormula(formula) === 'now()',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); const d = new Date(); cell.textContent = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`; cell.classList.add('cell-flash'); },
+                    answerKey: '=NOW()',
+                    formulaBreakdown: { syntax: "=NOW()", parts: [ { term: 'NOW()', def: 'Fungsi ini juga tidak memerlukan argumen apapun.' } ] }
+                },
+                'year': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan YEAR untuk mengambil TAHUN dari tanggal di A1.",
+                     setup: (modalContext) => { populateGrid([{r:1,c:1,t:'16/09/2025'}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'year(a1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "2025"; cell.classList.add('cell-flash'); },
+                    answerKey: '=YEAR(A1)',
+                    formulaBreakdown: { syntax: "=YEAR(tanggal)", parts: [ { term: 'tanggal', def: 'Sel yang berisi data tanggal lengkap (A1).' } ] }
+                },
+                'month': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan MONTH untuk mengambil BULAN dari tanggal di A1.",
+                     setup: (modalContext) => { populateGrid([{r:1,c:1,t:'16/09/2025'}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'month(a1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "9"; cell.classList.add('cell-flash'); },
+                    answerKey: '=MONTH(A1)',
+                    formulaBreakdown: { syntax: "=MONTH(tanggal)", parts: [ { term: 'tanggal', def: 'Sel yang berisi data tanggal lengkap (A1).' } ] }
+                },
+                'day': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan DAY untuk mengambil HARI dari tanggal di A1.",
+                     setup: (modalContext) => { populateGrid([{r:1,c:1,t:'16/09/2025'}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'day(a1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "16"; cell.classList.add('cell-flash'); },
+                    answerKey: '=DAY(A1)',
+                    formulaBreakdown: { syntax: "=DAY(tanggal)", parts: [ { term: 'tanggal', def: 'Sel yang berisi data tanggal lengkap (A1).' } ] }
+                },
+                'datedif': {
+                    type: 'formula',
+                    instruction: `Di sel C1, gunakan DATEDIF untuk menghitung selisih BULAN ("m") antara tanggal di A1 dan B1.`,
+                     setup: (modalContext) => { populateGrid([{r:1,c:1,t:'15/01/2024'}, {r:1,c:2,t:'20/05/2024'}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'datedif(a1,b1,"m")',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "4"; cell.classList.add('cell-flash'); },
+                    answerKey: '=DATEDIF(A1,B1,"m")',
+                    formulaBreakdown: { 
+                        syntax: '=DATEDIF(tgl_mulai, tgl_akhir, "unit")',
+                        parts: [ 
+                            { term: 'tgl_mulai', def: 'Tanggal awal (A1).' },
+                            { term: 'tgl_akhir', def: 'Tanggal akhir (B1).' },
+                            { term: '"unit"', def: 'Satuan selisih: "y" (tahun), "m" (bulan), atau "d" (hari).' }
+                        ] 
+                    }
+                },
+                'networkdays': {
+                    type: 'formula',
+                    instruction: "Di sel C1, gunakan NETWORKDAYS untuk menghitung jumlah hari kerja antara A1 dan B1.",
+                    setup: (modalContext) => { populateGrid([{r:1,c:1,t:'01/09/2025'}, {r:1,c:2,t:'07/09/2025'}], modalContext); activeCell = {row:1, col:3}; },
+                    check: (formula) => normalizeFormula(formula) === 'networkdays(a1,b1)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "5"; cell.classList.add('cell-flash'); },
+                    answerKey: '=NETWORKDAYS(A1,B1)',
+                    formulaBreakdown: { 
+                        syntax: '=NETWORKDAYS(tgl_mulai, tgl_akhir)',
+                        parts: [ 
+                            { term: 'tgl_mulai', def: 'Tanggal awal (A1).' },
+                            { term: 'tgl_akhir', def: 'Tanggal akhir (B1). Fungsi ini otomatis tidak menghitung Sabtu & Minggu.' }
+                        ] 
+                    }
+                },
+                'pmt': {
+                    type: 'formula',
+                    instruction: "Di sel B4, hitung cicilan bulanan (PMT) dari pinjaman di B3, dengan suku bunga tahunan di B1 dan tenor di B2.",
+                    setup: (modalContext) => {
+                         populateGrid([
+                            {r:1,c:1,t:'Suku Bunga (Thn)'}, {r:1,c:2,t:'5%'}, 
+                            {r:2,c:1,t:'Tenor (Bulan)'}, {r:2,c:2,t:'36'},
+                            {r:3,c:1,t:'Jumlah Pinjaman'}, {r:3,c:2,t:'50000000'},
+                            {r:4,c:1,t:'Cicilan Bulanan'},
+                         ], modalContext);
+                         activeCell = { row: 4, col: 2 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'pmt(b1/12,b2,-b3)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "1.498.461"; cell.classList.add('cell-flash'); },
+                    answerKey: '=PMT(B1/12, B2, -B3)',
+                    formulaBreakdown: { 
+                        syntax: '=PMT(suku_bunga_per_periode, jumlah_periode, nilai_pinjaman)',
+                        parts: [ 
+                            { term: 'suku_bunga_per_periode', def: 'Suku bunga tahunan dibagi 12 (B1/12).' },
+                            { term: 'jumlah_periode', def: 'Total periode cicilan dalam bulan (B2).' },
+                            { term: 'nilai_pinjaman', def: 'Jumlah pinjaman, biasanya negatif (-B3) karena merupakan uang keluar.' }
+                        ] 
+                    }
+                },
+                'fv': {
+                    type: 'formula',
+                    instruction: "Di sel B4, hitung nilai masa depan (FV) dari investasi dengan setoran rutin di B3, suku bunga tahunan di B1, selama periode di B2.",
+                    setup: (modalContext) => {
+                         populateGrid([
+                            {r:1,c:1,t:'Bunga/Tahun'}, {r:1,c:2,t:'6%'}, 
+                            {r:2,c:1,t:'Periode (Bulan)'}, {r:2,c:2,t:'60'},
+                            {r:3,c:1,t:'Setoran/Bulan'}, {r:3,c:2,t:'500000'},
+                            {r:4,c:1,t:'Nilai Masa Depan'},
+                         ], modalContext);
+                         activeCell = { row: 4, col: 2 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'fv(b1/12,b2,-b3)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "34.885.015"; cell.classList.add('cell-flash'); },
+                    answerKey: '=FV(B1/12,B2,-B3)',
+                    formulaBreakdown: { 
+                        syntax: '=FV(suku_bunga, jumlah_periode, setoran_rutin)',
+                        parts: [ 
+                            { term: 'suku_bunga', def: 'Suku bunga per periode (B1/12).' },
+                            { term: 'jumlah_periode', def: 'Total periode investasi (B2).' },
+                            { term: 'setoran_rutin', def: 'Jumlah setoran per periode, negatif (-B3) karena uang keluar.' }
+                        ] 
+                    }
+                },
+                'npv': {
+                    type: 'formula',
+                    instruction: "Di sel B5, hitung Net Present Value (NPV) dari arus kas di B2:B4 dengan tingkat diskonto di B1. Jangan lupa tambahkan investasi awal.",
+                    setup: (modalContext) => {
+                         populateGrid([
+                            {r:1,c:1,t:'Diskonto'}, {r:1,c:2,t:'10%'}, 
+                            {r:2,c:1,t:'Arus Kas Thn 1'}, {r:2,c:2,t:'20000'},
+                            {r:3,c:1,t:'Arus Kas Thn 2'}, {r:3,c:2,t:'25000'},
+                            {r:4,c:1,t:'Arus Kas Thn 3'}, {r:4,c:2,t:'30000'},
+                            {r:5,c:1,t:'Investasi Awal'}, {r:5,c:2,t:'-50000'},
+                            {r:6,c:1,t:'NPV'},
+                         ], modalContext);
+                         activeCell = { row: 6, col: 2 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'npv(b1,b2:b4)+b5',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "12.302"; cell.classList.add('cell-flash'); },
+                    answerKey: '=NPV(B1,B2:B4)+B5',
+                    formulaBreakdown: { 
+                        syntax: '=NPV(suku_bunga, arus_kas1, ...) + investasi_awal',
+                        parts: [ 
+                            { term: 'suku_bunga', def: 'Tingkat diskonto per periode (B1).' },
+                            { term: 'arus_kas1, ...', def: 'Serangkaian arus kas masa depan (B2:B4).' },
+                            { term: '+ investasi_awal', def: 'Investasi awal (B5) ditambahkan di luar fungsi NPV.' }
+                        ] 
+                    }
+                },
+                'irr': {
+                    type: 'formula',
+                    instruction: "Di sel B6, hitung Internal Rate of Return (IRR) dari serangkaian arus kas di B1:B5.",
+                    setup: (modalContext) => {
+                         populateGrid([
+                            {r:1,c:1,t:'Thn 0 (Investasi)'}, {r:1,c:2,t:'-100000'}, 
+                            {r:2,c:1,t:'Thn 1'}, {r:2,c:2,t:'30000'},
+                            {r:3,c:1,t:'Thn 2'}, {r:3,c:2,t:'40000'},
+                            {r:4,c:1,t:'Thn 3'}, {r:4,c:2,t:'45000'},
+                            {r:5,c:1,t:'Thn 4'}, {r:5,c:2,t:'35000'},
+                            {r:6,c:1,t:'IRR'},
+                         ], modalContext);
+                         activeCell = { row: 6, col: 2 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'irr(b1:b5)',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "22%"; cell.classList.add('cell-flash'); },
+                    answerKey: '=IRR(B1:B5)',
+                    formulaBreakdown: { 
+                        syntax: '=IRR(rentang_arus_kas)',
+                        parts: [ 
+                            { term: 'rentang_arus_kas', def: 'Rentang sel yang berisi semua arus kas, termasuk investasi awal yang negatif (B1:B5).' }
+                        ] 
+                    }
+                },
+                'ifs': {
+                    type: 'formula',
+                    instruction: "Di sel C2, gunakan IFS untuk memberikan Grade berdasarkan Skor di B2 (>=90 'A'; >=80 'B'; <80 'C').",
+                    setup: (modalContext) => {
+                         const refData = [
+                            {r:1,c:1,t:'Nama'}, {r:1,c:2,t:'Skor'}, {r:1,c:3,t:'Grade'},
+                            {r:2,c:1,t:'Andi'}, {r:2,c:2,t:'95'},
+                            {r:3,c:1,t:'Budi'}, {r:3,c:2,t:'82'},
+                            {r:4,c:1,t:'Citra'}, {r:4,c:2,t:'75'},
+                        ];
+                        populateGrid(refData, modalContext);
+                        activeCell = { row: 2, col: 3 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'ifs(b2>=90,"a",b2>=80,"b",b2<80,"c")',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "A"; cell.classList.add('cell-flash'); },
+                    answerKey: '=IFS(B2>=90,"A",B2>=80,"B",B2<80,"C")',
+                    formulaBreakdown: {
+                        syntax: '=IFS(kondisi1, hasil1, [kondisi2, hasil2], ...)',
+                        parts: [
+                            { term: 'kondisi1, hasil1', def: 'Pasangan syarat pertama dan hasilnya jika syarat terpenuhi.' },
+                            { term: '[kondisi2, hasil2]', def: 'Pasangan syarat kedua, dan seterusnya.' }
+                        ]
+                    }
+                },
+                'and': {
+                    type: 'formula',
+                    instruction: "Di sel D2, gunakan AND untuk mengecek apakah Stok (B2) > 50 DAN Kategori (C2) adalah 'Elektronik'.",
+                    setup: (modalContext) => {
+                         const refData = [
+                            {r:1,c:1,t:'Produk'}, {r:1,c:2,t:'Stok'}, {r:1,c:3,t:'Kategori'}, {r:1,c:4,t:'Hasil'},
+                            {r:2,c:1,t:'Mouse'}, {r:2,c:2,t:'60'}, {r:2,c:3,t:'Elektronik'},
+                            {r:3,c:1,t:'Buku'}, {r:3,c:2,t:'100'}, {r:3,c:3,t:'ATK'},
+                        ];
+                        populateGrid(refData, modalContext);
+                        activeCell = { row: 2, col: 4 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'and(b2>50,c2="elektronik")',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "TRUE"; cell.classList.add('cell-flash'); },
+                    answerKey: '=AND(B2>50,C2="Elektronik")',
+                    formulaBreakdown: {
+                        syntax: '=AND(kondisi1, [kondisi2], ...)',
+                        parts: [
+                            { term: 'kondisi1', def: 'Syarat pertama yang harus dicek.' },
+                            { term: '[kondisi2]', def: 'Syarat kedua. Semua kondisi harus BENAR agar hasilnya TRUE.' }
+                        ]
+                    }
+                },
+                'or': {
+                    type: 'formula',
+                    instruction: "Di sel D2, gunakan OR untuk mengecek apakah Kategori (C2) adalah 'ATK' ATAU 'Buku'.",
+                    setup: (modalContext) => {
+                         const refData = [
+                            {r:1,c:1,t:'Produk'}, {r:1,c:2,t:'Stok'}, {r:1,c:3,t:'Kategori'}, {r:1,c:4,t:'Hasil'},
+                            {r:2,c:1,t:'Pulpen'}, {r:2,c:2,t:'150'}, {r:2,c:3,t:'ATK'},
+                            {r:3,c:1,t:'Monitor'}, {r:3,c:2,t:'20'}, {r:3,c:3,t:'Elektronik'},
+                        ];
+                        populateGrid(refData, modalContext);
+                        activeCell = { row: 2, col: 4 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'or(c2="atk",c2="buku")',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "TRUE"; cell.classList.add('cell-flash'); },
+                    answerKey: '=OR(C2="ATK",C2="Buku")',
+                    formulaBreakdown: {
+                        syntax: '=OR(kondisi1, [kondisi2], ...)',
+                        parts: [
+                            { term: 'kondisi1', def: 'Syarat pertama yang harus dicek.' },
+                            { term: '[kondisi2]', def: 'Syarat kedua. Cukup salah satu kondisi BENAR untuk menghasilkan TRUE.' }
+                        ]
+                    }
+                },
+                'iferror': {
+                    type: 'formula',
+                    instruction: "Di sel C2, VLOOKUP gagal. Gunakan IFERROR untuk menampilkan 'Tidak Ada' jika terjadi error.",
+                    setup: (modalContext) => {
+                         const refData = [
+                            {r:1,c:1,t:'ID'}, {r:1,c:2,t:'Produk'}, {r:1,c:3,t:'Hasil'},
+                            {r:2,c:1,t:'A01'}, {r:2,c:2,t:'Buku'},
+                            {r:3,c:1,t:'A02'}, {r:3,c:2,t:'Pulpen'},
+                        ];
+                        const mainData = [{r:2,c:3,t:'#N/A'}];
+                        populateGrid([...refData, ...mainData], modalContext);
+                        activeCell = { row: 2, col: 3 };
+                    },
+                    check: (formula) => normalizeFormula(formula) === 'iferror(vlookup("a03",a2:b3,2,0),"tidakada")',
+                    action: () => { const cell = modal.querySelector('.grid-cell.active'); cell.textContent = "Tidak Ada"; cell.classList.add('cell-flash'); },
+                    answerKey: '=IFERROR(VLOOKUP("A03",A2:B3,2,0),"Tidak Ada")',
+                    formulaBreakdown: {
+                        syntax: '=IFERROR(perhitungan, nilai_jika_error)',
+                        parts: [
+                            { term: 'perhitungan', def: 'Rumus atau operasi yang mungkin menghasilkan error.' },
+                            { term: 'nilai_jika_error', def: 'Teks atau nilai yang akan ditampilkan jika error terjadi.' }
+                        ]
+                    }
+                },
+                'caseStudySales': {
+                    type: 'case-study',
+                    steps: [
+                        {
+                            instruction: "Langkah 1: Di sel C2, rapikan 'Nama Produk' dari B2 menggunakan PROPER dan TRIM.",
+                            targetCell: { r: 2, c: 3 },
+                            check: (formula) => normalizeFormula(formula) === 'proper(trim(b2))',
+                            action: (grid) => { 
+                                grid.querySelector('[data-row="2"][data-col="3"]').textContent = 'Kaos Polos';
+                                grid.querySelector('[data-row="3"][data-col="3"]').textContent = 'Kemeja Flanel';
+                                grid.querySelector('[data-row="4"][data-col="3"]').textContent = 'Monitor 24 Inch';
+                            }
+                        },
+                        {
+                            instruction: "Langkah 2: Di sel D2, gunakan XLOOKUP untuk mencari 'Harga Satuan' dari produk di C2 dari Tabel Referensi.",
+                            targetCell: { r: 2, c: 4 },
+                            check: (formula) => normalizeFormula(formula) === 'xlookup(c2,h2:h4,i2:i4)',
+                            action: (grid) => { 
+                                grid.querySelector('[data-row="2"][data-col="4"]').textContent = '80000';
+                                grid.querySelector('[data-row="3"][data-col="4"]').textContent = '150000';
+                                grid.querySelector('[data-row="4"][data-col="4"]').textContent = '1250000';
+                            }
+                        },
+                        {
+                            instruction: "Langkah 3: Di sel E2, hitung 'Total Pendapatan' (Harga Satuan di D2 * Jumlah di F2).",
+                            targetCell: { r: 2, c: 5 },
+                            check: (formula) => normalizeFormula(formula) === 'd2*f2',
+                            action: (grid) => { 
+                                grid.querySelector('[data-row="2"][data-col="5"]').textContent = '800000';
+                                grid.querySelector('[data-row="3"][data-col="5"]').textContent = '750000';
+                                grid.querySelector('[data-row="4"][data-col="5"]').textContent = '2500000';
+                            }
+                        },
+                        {
+                            instruction: `Langkah 4: Di sel I8, hitung total penjualan untuk kategori "Elektronik" menggunakan SUMIF (gunakan data di G2:H4).`,
+                            targetCell: { r: 8, c: 9 },
+                            check: (formula) => normalizeFormula(formula) === 'sumif(g2:g4,"elektronik",i2:i4)',
+                            action: (grid) => { grid.querySelector('[data-row="8"][data-col="9"]').textContent = '2,500,000'; }
+                        }
+                    ],
+                    setup: (grid, modalContext) => {
+                        // Main Data (Messy)
+                        populateGrid([
+                            {r:1,c:1,t:'ID Pesanan'},{r:1,c:2,t:'Nama Produk (Kotor)'},{r:1,c:3,t:'Nama Produk (Rapi)'},{r:1,c:4,t:'Harga Satuan'},{r:1,c:5,t:'Total Pendapatan'},{r:1,c:6,t:'Jumlah'},
+                            {r:2,c:1,t:'TRX001'},{r:2,c:2,t:'  kaos Polos  '},{r:2,c:6,t:'10'},
+                            {r:3,c:1,t:'TRX002'},{r:3,c:2,t:'KEMEJA flanel'},{r:3,c:6,t:'5'},
+                            {r:4,c:1,t:'TRX003'},{r:4,c:2,t:'monitor 24 inch'},{r:4,c:6,t:'2'},
+                            // Reference Table
+                            {r:1,c:8,t:'Produk Rapi'},{r:1,c:9,t:'Harga'},{r:1,c:7,t:'Kategori'},
+                            {r:2,c:8,t:'Kaos Polos'},{r:2,c:9,t:'80000'},{r:2,c:7,t:'Pakaian'},
+                            {r:3,c:8,t:'Kemeja Flanel'},{r:3,c:9,t:'150000'},{r:3,c:7,t:'Pakaian'},
+                            {r:4,c:8,t:'Monitor 24 Inch'},{r:4,c:9,t:'1250000'},{r:4,c:7,t:'Elektronik'},
+                            // SUMIF Table
+                            {r:7, c:8, t:'Kategori'},{r:8, c:8, t:'Elektronik'},{r:7, c:9, t:'Total Penjualan'}
+                        ], modalContext);
+                    }
+                }
+            };
+
+            
+            // --- EVENT LISTENERS ---
+            searchInput.addEventListener('input', handleSearch);
+            winButton.addEventListener('click', () => switchOS('win'));
+            macButton.addEventListener('click', () => switchOS('mac'));
+            closeModalBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                cleanupPracticeModal();
+            });
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                    cleanupPracticeModal();
+                }
+            });
+            
+            submitFormulaBtn.addEventListener('click', () => {
+                if(currentPractice && currentPractice.type === 'formula') {
+                    if (currentPractice.check(formulaInput.value)) {
+                       completePractice(currentPractice.id);
+                    } else {
+                        showFeedback("Rumus belum tepat, coba lagi!", false);
+                    }
+                }
+            });
+            
+            showAnswerBtn.addEventListener('click', () => {
+                if (currentPractice && currentPractice.answerKey) {
+                    formulaInput.value = currentPractice.answerKey.substring(1);
+                    showFeedback("Kunci jawaban ditampilkan. Silakan pelajari rumusnya.", true);
+                    formulaInput.focus();
+                }
+            });
+
+            formulaInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    submitFormulaBtn.click();
+                }
+            });
+            
+            tabSwitcher.addEventListener('click', (e) => {
+                const button = e.target.closest('.tab-btn');
+                if (!button) return;
+                
+                activeTab = button.dataset.tab;
+                
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+                button.classList.add('active-tab');
+
+                tabPanes.forEach(pane => {
+                    if (pane.id === `${activeTab}-content`) {
+                        pane.classList.remove('hidden');
+                    } else {
+                        pane.classList.add('hidden');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.sub-tab-switcher').forEach(switcher => {
+                switcher.addEventListener('click', (e) => {
+                    const button = e.target.closest('.sub-tab-btn');
+                    if (!button) return;
+
+                    const subTabId = button.dataset.subTab;
+                    const parentPane = button.closest('.tab-pane');
+
+                    parentPane.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active-sub-tab'));
+                    button.classList.add('active-sub-tab');
+
+                    parentPane.querySelectorAll('.sub-tab-pane').forEach(pane => {
+                        if (pane.id === `${subTabId}-content`) {
+                            pane.classList.remove('hidden');
+                        } else {
+                            pane.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            // --- INTERACTIVE SELECTION LOGIC ---
+            // --- INTERACTIVE SELECTION LOGIC ---
+            addMouseListenersToGrid(excelContainer, formulaInput);
+
+            function updateSelection(endCell, updateActive, context = document) {
+                context.querySelectorAll('.grid-cell.selected').forEach(c => c.classList.remove('selected'));
+                if (updateActive) {
+                    updateActiveCell(context);
+                }
+
+                const endCoords = {
+                    row: parseInt(endCell.dataset.row),
+                    col: parseInt(endCell.dataset.col)
+                };
+
+                const startRow = Math.min(selectionStartCell.row, endCoords.row);
+                const endRow = Math.max(selectionStartCell.row, endCoords.row);
+                const startCol = Math.min(selectionStartCell.col, endCoords.col);
+                const endCol = Math.max(selectionStartCell.col, endCoords.col);
+
+                for (let r = startRow; r <= endRow; r++) {
+                    for (let c = startCol; c <= endCol; c++) {
+                        const cellToSelect = context.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`);
+                        if (cellToSelect) {
+                            cellToSelect.classList.add('selected');
+                        }
+                    }
+                }
+            }
+
+            function addMouseListenersToGrid(gridContainer, formulaInputElement) {
+                let isSelecting = false;
+                let selectionStartCell = { row: null, col: null };
+                let selectionEndCell = { row: null, col: null };
+
+                gridContainer.addEventListener('mousedown', (e) => {
+                    const cell = e.target.closest('.grid-cell:not(.grid-header)');
+                    if (!cell) return;
+
+                    isSelecting = true;
+                    selectionStartCell.row = parseInt(cell.dataset.row);
+                    selectionStartCell.col = parseInt(cell.dataset.col);
+                    selectionEndCell.row = selectionStartCell.row;
+                    selectionEndCell.col = selectionStartCell.col;
+                    
+                    activeCell.row = selectionStartCell.row;
+                    activeCell.col = selectionStartCell.col;
+                    
+                    updateSelection(cell, true, gridContainer);
+                });
+
+                gridContainer.addEventListener('mouseover', (e) => {
+                    if (!isSelecting) return;
+                    const cell = e.target.closest('.grid-cell:not(.grid-header)');
+                    if (!cell) return;
+                    selectionEndCell.row = parseInt(cell.dataset.row);
+                    selectionEndCell.col = parseInt(cell.dataset.col);
+                    updateSelection(cell, false, gridContainer);
+                });
+
+                // Attach mouseup to window to catch releases outside the grid
+                const mouseUpHandler = () => {
+                    if (isSelecting) {
+                        isSelecting = false;
+                        const contextModal = gridContainer.closest('#practice-modal, #case-study-modal');
+                        const formulaInputElement = contextModal.id === 'practice-modal' ? formulaInput : caseStudyFormulaInput;
+                        const currentPracticeScenario = contextModal.id === 'practice-modal' ? currentPractice : (caseStudyState.scenario ? caseStudyState.scenario.steps[caseStudyState.currentStepIndex] : null);
+                        
+                        if (currentPracticeScenario) {
+                            const startRow = Math.min(selectionStartCell.row, selectionEndCell.row);
+                            const endRow = Math.max(selectionStartCell.row, selectionEndCell.row);
+                            const startCol = Math.min(selectionStartCell.col, selectionEndCell.col);
+                            const endCol = Math.max(selectionStartCell.col, selectionEndCell.col);
+
+                            const startColLetter = colNumToLetter(startCol);
+                            const endColLetter = colNumToLetter(endCol);
+                            
+                            let rangeString;
+                            if (startRow === endRow && startCol === endCol) {
+                                rangeString = `${startColLetter}${startRow}`;
+                            } else {
+                                rangeString = `${startColLetter}${startRow}:${endColLetter}${endRow}`;
+                            }
+
+                            const currentFormula = formulaInputElement.value;
+                            const lastChar = currentFormula.trim().slice(-1);
+                            
+                            if (lastChar === '(' || lastChar === ',') {
+                                // Jika karakter terakhir adalah ( atau , tambahkan rentang baru
+                                formulaInputElement.value += rangeString;
+                            } else {
+                                // Jika tidak, ganti argumen terakhir
+                                const lastCommaIndex = currentFormula.lastIndexOf(',');
+                                const lastParenIndex = currentFormula.lastIndexOf('(');
+                                let baseFormula;
+                                if (lastCommaIndex > lastParenIndex) {
+                                    baseFormula = currentFormula.substring(0, lastCommaIndex + 1);
+                                } else if (lastParenIndex !== -1) {
+                                    baseFormula = currentFormula.substring(0, lastParenIndex + 1);
+                                } else {
+                                    baseFormula = ""; // Jika tidak ada kurung atau koma, ganti semuanya
+                                }
+                                formulaInputElement.value = (baseFormula + " " + rangeString).trim();
+                            }
+                            formulaInputElement.focus();
+                        }
+                    }
+                };
+                
+                window.addEventListener('mouseup', mouseUpHandler);
+                
+
+                // Store the handler to be able to remove it later
+                gridContainer.mouseUpHandler = mouseUpHandler;
+            }
+
+            excelContainer.addEventListener('mouseover', (e) => {
+                if (!isSelecting) return;
+                const cell = e.target.closest('.grid-cell:not(.grid-header)');
+                if (!cell) return;
+                selectionEndCell.row = parseInt(cell.dataset.row);
+                selectionEndCell.col = parseInt(cell.dataset.col);
+                updateSelection(cell, false);
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isSelecting) {
+                    isSelecting = false;
+                    if (currentPractice && currentPractice.type === 'formula') {
+                        const startRow = Math.min(selectionStartCell.row, selectionEndCell.row);
+                        const endRow = Math.max(selectionStartCell.row, selectionEndCell.row);
+                        const startCol = Math.min(selectionStartCell.col, selectionEndCell.col);
+                        const endCol = Math.max(selectionStartCell.col, selectionEndCell.col);
+
+                        const startColLetter = colNumToLetter(startCol);
+                        const endColLetter = colNumToLetter(endCol);
+                        
+                        let rangeString;
+                        if (startRow === endRow && startCol === endCol) {
+                            rangeString = `${startColLetter}${startRow}`;
+                        } else {
+                            rangeString = `${startColLetter}${startRow}:${endColLetter}${endRow}`;
+                        }
+
+                        // --- NEW LOGIC for replacing instead of appending ---
+                        const currentFormula = formulaInput.value;
+                        const lastCommaIndex = currentFormula.lastIndexOf(',');
+                        const lastParenIndex = currentFormula.lastIndexOf('(');
+
+                        let baseFormula;
+                        if (lastCommaIndex > lastParenIndex) {
+                            baseFormula = currentFormula.substring(0, lastCommaIndex + 1);
+                        } else if (lastParenIndex !== -1) {
+                            baseFormula = currentFormula.substring(0, lastParenIndex + 1);
+                        } else {
+                            baseFormula = currentFormula; 
+                        }
+                        
+                        if (baseFormula.length > 0 && baseFormula.slice(-1) !== ' ' && baseFormula.slice(-1) !== '(') {
+                           baseFormula += ' ';
+                        }
+
+                        formulaInput.value = (baseFormula + rangeString).trim();
+                        formulaInput.focus();
+                    }
+                }
+            });
+
+            function updateSelection(endCell, updateActive) {
+                document.querySelectorAll('.grid-cell.selected').forEach(c => c.classList.remove('selected'));
+                if (updateActive) {
+                    updateActiveCell();
+                }
+
+                const endCoords = {
+                    row: parseInt(endCell.dataset.row),
+                    col: parseInt(endCell.dataset.col)
+                };
+
+                const startRow = Math.min(selectionStartCell.row, endCoords.row);
+                const endRow = Math.max(selectionStartCell.row, endCoords.row);
+                const startCol = Math.min(selectionStartCell.col, endCoords.col);
+                const endCol = Math.max(selectionStartCell.col, endCoords.col);
+
+                for (let r = startRow; r <= endRow; r++) {
+                    for (let c = startCol; c <= endCol; c++) {
+                        const cellToSelect = context.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`);
+                        if (cellToSelect) {
+                            cellToSelect.classList.add('selected');
+                        }
+                    }
+                }
+            }
+
+            // --- GAMIFICATION LOGIC ---
+            const badgeDefinitions = {
+                'dasarMaster': { name: 'Ahli Dasar', desc: 'Selesaikan semua latihan dasar.', icon: 'mouse-pointer-click', required: ['copy', 'paste', 'undo'] },
+                'navigator': { name: 'Navigator Cepat', desc: 'Selesaikan semua latihan navigasi & seleksi.', icon: 'move', required: ['jumpEdge', 'selectCol', 'selectRow'] },
+                'lookupMaster': { name: 'Master Lookup', desc: 'Kuasai VLOOKUP, HLOOKUP, dan XLOOKUP.', icon: 'search', required: ['vlookup', 'hlookup', 'xlookup'] }
+            };
+
+            function loadUserData() {
+                const savedData = localStorage.getItem('pintasanXLUserData');
+                if (savedData) {
+                    userData = JSON.parse(savedData);
+                }
+                updateScoreDisplay();
+            }
+
+            function saveUserData() {
+                localStorage.setItem('pintasanXLUserData', JSON.stringify(userData));
+            }
+
+            function updateScoreDisplay() {
+                scoreDisplay.textContent = userData.score;
+            }
+
+            function awardPoints(points) {
+                userData.score += points;
+                updateScoreDisplay();
+            }
+
+            function completePractice(practiceId) {
+                showFeedback("Berhasil! ✨", true);
+                if (currentPractice.action) currentPractice.action();
+
+                if (!userData.completed.includes(practiceId)) {
+                    awardPoints(10);
+                    userData.completed.push(practiceId);
+                    checkBadges();
+                    saveUserData();
+                }
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    cleanupPracticeModal();
+                }, 1500);
+            }
+
+            function checkBadges() {
+                for (const badgeId in badgeDefinitions) {
+                    if (!userData.badges.includes(badgeId)) {
+                        const badge = badgeDefinitions[badgeId];
+                        const allRequiredMet = badge.required.every(req => userData.completed.includes(req));
+                        if (allRequiredMet) {
+                            userData.badges.push(badgeId);
+                            showToast(badge.name, badge.icon);
+                        }
+                    }
+                }
+            }
+
+            function showToast(badgeName, badgeIcon) {
+                toast.innerHTML = `<i data-lucide="award" class="w-8 h-8 text-amber-300"></i>
+                                   <div>
+                                       <p class="font-bold">Lencana Terbuka!</p>
+                                       <p class="text-sm">${badgeName}</p>
+                                   </div>`;
+                lucide.createIcons();
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            }
+
+            function renderBadges() {
+                badgesContainer.innerHTML = '';
+                for (const badgeId in badgeDefinitions) {
+                    const badge = badgeDefinitions[badgeId];
+                    const isEarned = userData.badges.includes(badgeId);
+                    const badgeHTML = `
+                        <div class="flex flex-col items-center text-center p-4 rounded-lg ${isEarned ? 'bg-amber-500/10' : 'bg-slate-700/50'}">
+                            <div class="w-16 h-16 rounded-full flex items-center justify-center ${isEarned ? 'bg-amber-400' : 'bg-slate-600'} mb-2">
+                                <i data-lucide="${badge.icon}" class="w-8 h-8 ${isEarned ? 'text-slate-900' : 'text-slate-400'}"></i>
+                            </div>
+                            <h4 class="font-bold text-sm ${isEarned ? 'text-amber-300' : 'text-white'}">${badge.name}</h4>
+                            <p class="text-xs text-slate-400 mt-1">${badge.desc}</p>
+                        </div>`;
+                    badgesContainer.innerHTML += badgeHTML;
+                }
+                lucide.createIcons();
+            }
+            
+            openBadgesBtn.addEventListener('click', () => {
+                renderBadges();
+                badgesModal.classList.remove('hidden');
+            });
+            closeBadgesModalBtn.addEventListener('click', () => badgesModal.classList.add('hidden'));
+
+            // --- CASE STUDY LOGIC ---
+           // --- CASE STUDY LOGIC ---
+            let caseStudyState = {
+                currentStepIndex: 0,
+                scenario: null
+            };
+
+           function startCaseStudy(caseStudyId) {
+                caseStudyState.scenario = practiceScenarios[caseStudyId];
+                caseStudyState.currentStepIndex = 0;
+                
+                caseStudyModal.classList.remove('hidden');
+                
+                const grid = generateExcelGrid(15, 10, caseStudyGridContainer); 
+                if (caseStudyState.scenario.setup) {
+                    caseStudyState.scenario.setup(caseStudyModal); // Pass the entire modal as context
+                }
+
+                // Add mouse listeners to the case study grid
+                addMouseListenersToGrid(caseStudyGridContainer, caseStudyFormulaInput);
+
+                // Add mouse listeners to the case study grid
+                addMouseListenersToGrid(caseStudyGridContainer, caseStudyFormulaInput);
+
+                renderCaseStudyStep();
+            }
+
+            function renderCaseStudyStep() {
+                const steps = caseStudyState.scenario.steps;
+                const currentStep = steps[caseStudyState.currentStepIndex];
+
+                // Render sidebar
+                caseStudyStepsContainer.innerHTML = steps.map((step, index) => {
+                    const isCompleted = index < caseStudyState.currentStepIndex;
+                    const isActive = index === caseStudyState.currentStepIndex;
+                    return `<li class="step-item p-3 rounded-md ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="${isCompleted ? 'check-circle-2' : 'circle'}" class="step-icon w-5 h-5 ${isCompleted ? 'text-green-400' : (isActive ? 'text-blue-300' : 'text-slate-500')}"></i>
+                                    <div>
+                                        <p class="font-bold text-sm ${isActive ? 'text-white' : 'text-slate-400'}">Langkah ${index + 1}</p>
+                                        <p class="text-xs text-slate-400">${step.instruction.split(':')[1].split('(')[0].trim()}</p>
+                                    </div>
+                                </div>
+                            </li>`;
+                }).join('');
+                
+                lucide.createIcons();
+
+                // Update main panel
+                caseStudyInstructionText.textContent = currentStep.instruction;
+                caseStudyFormulaInput.value = '';
+                caseStudyFeedbackBox.classList.add('hidden');
+                activeCell = currentStep.targetCell;
+                updateActiveCell(caseStudyModal); // Pass modal context
+                caseStudyFormulaContainer.classList.remove('hidden');
+                caseStudyFormulaInput.focus();
+            }
+
+            function completeCaseStudyStep() {
+                const grid = caseStudyGridContainer.querySelector('.excel-grid');
+                const currentStep = caseStudyState.scenario.steps[caseStudyState.currentStepIndex];
+                
+                // Perform action
+                currentStep.action(grid);
+                const targetCellNode = grid.querySelector(`[data-row="${currentStep.targetCell.r}"][data-col="${currentStep.targetCell.c}"]`);
+                targetCellNode.classList.add('cell-flash');
+
+                caseStudyState.currentStepIndex++;
+
+                if (caseStudyState.currentStepIndex >= caseStudyState.scenario.steps.length) {
+                    // Case study finished
+                    caseStudyInstructionText.textContent = "Selamat, Anda telah menyelesaikan studi kasus ini!";
+                    caseStudyFormulaContainer.classList.add('hidden');
+                    awardPoints(50); // Bonus points for case study
+                    if (!userData.completed.includes('caseStudySales')) {
+                        userData.completed.push('caseStudySales');
+                    }
+                    saveUserData();
+                    setTimeout(() => caseStudyModal.classList.add('hidden'), 2500);
+                } else {
+                    renderCaseStudyStep();
+                }
+            }
+
+            startCaseStudyBtn.addEventListener('click', () => startPractice('caseStudySales'));
+            closeCaseStudyBtn.addEventListener('click', () => caseStudyModal.classList.add('hidden'));
+            caseStudySubmitBtn.addEventListener('click', () => {
+                const currentStep = caseStudyState.scenario.steps[caseStudyState.currentStepIndex];
+                if (currentStep.check(caseStudyFormulaInput.value)) {
+                    caseStudyFeedbackBox.classList.add('hidden');
+                    completeCaseStudyStep();
+                } else {
+                    caseStudyFeedbackBox.textContent = "Jawaban belum tepat, coba lagi!";
+                    caseStudyFeedbackBox.className = 'mt-4 p-3 rounded-md text-center font-semibold bg-red-500/20 text-red-300';
+                    caseStudyFeedbackBox.classList.remove('hidden');
+                }
+            });
+            
+            // --- TIME CHALLENGE PUZZLE LOGIC ---
+            let challengeTimer = null;
+            let challengeState = {
+                isActive: false,
+                timeLeft: 60,
+                score: 0,
+                currentQuestion: null,
+                userAnswer: [],
+                correctAnswer: []
+            };
+
+            function renderChallengeScreen() {
+                let content = '';
+                if (!challengeState.isActive) {
+                     content = `
+                        <div class="text-center">
+                            <h2 class="text-4xl font-bold text-white mb-2">Tantangan Waktu</h2>
+                            <p class="text-slate-400 mb-6">Selesaikan puzzle shortcut sebanyak mungkin dalam 60 detik!</p>
+                            <p class="text-lg text-white mb-8">Skor Tertinggi: <span class="font-bold text-amber-400">${userData.challengeHighScore}</span></p>
+                            <button id="run-challenge-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg text-lg">Mulai!</button>
+                             <button id="close-challenge-btn" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                        </div>`;
+                } else if (challengeState.timeLeft > 0) {
+                     content = `
+                        <div class="w-full max-w-2xl mx-auto flex flex-col items-center">
+                             <div class="flex justify-between w-full mb-8">
+                                <div class="text-center">
+                                    <p class="text-slate-400 text-sm">WAKTU</p>
+                                    <p id="challenge-timer" class="text-4xl font-bold text-white">${challengeState.timeLeft}</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-slate-400 text-sm">SKOR</p>
+                                    <p id="challenge-score" class="text-4xl font-bold text-amber-400">${challengeState.score}</p>
+                                </div>
+                            </div>
+                            <div id="challenge-question-box" class="bg-slate-800 p-8 rounded-lg text-center w-full">
+                                <p class="text-2xl font-semibold text-white">${challengeState.currentQuestion.task}</p>
+                            </div>
+                             <div class="w-full mt-6">
+                                <p class="text-slate-400 text-sm text-center mb-2">Jawaban Anda:</p>
+                                <div id="challenge-answer-zone" class="answer-zone min-h-[60px] bg-slate-900/50 rounded-lg p-3 flex items-center justify-center gap-2">
+                                    ${challengeState.userAnswer.map(key => createKeyElement(key)).join(' + ')}
+                                </div>
+                            </div>
+
+                            <div class="w-full mt-6">
+                                <p class="text-slate-400 text-sm text-center mb-2">Potongan Puzzle:</p>
+                                <div id="challenge-puzzle-zone" class="bg-slate-800 rounded-lg p-3 flex items-center justify-center gap-2 flex-wrap">
+                                    <!-- Puzzle pieces will go here -->
+                                </div>
+                            </div>
+                        </div>`;
+                } else { // Time's up
+                     content = `
+                        <div class="text-center">
+                            <h2 class="text-4xl font-bold text-white mb-2">Waktu Habis!</h2>
+                            <p class="text-slate-400 mb-6">Anda menyelesaikan tantangan dengan skor:</p>
+                            <p class="text-7xl font-bold text-amber-400 mb-4">${challengeState.score}</p>
+                            ${challengeState.score > userData.challengeHighScore ? '<p class="text-green-400 font-semibold mb-4">REKOR BARU!</p>' : `<p class="text-lg text-white mb-8">Skor Tertinggi: <span class="font-bold text-amber-400">${userData.challengeHighScore}</span></p>`}
+                            <div class="flex gap-4 justify-center">
+                                <button id="retry-challenge-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg text-lg">Coba Lagi</button>
+                                <button id="close-challenge-btn" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg text-lg">Tutup</button>
+                            </div>
+                        </div>`;
+                }
+                challengeModal.innerHTML = content;
+                lucide.createIcons();
+            }
+            
+            function stopChallenge() {
+                if(challengeTimer) clearInterval(challengeTimer);
+                challengeTimer = null;
+                challengeState.isActive = false;
+                challengeModal.classList.add('hidden');
+            }
+
+            function startChallenge() {
+                challengeState = { isActive: true, timeLeft: 60, score: 0, currentQuestion: null, userAnswer: [], correctAnswer: [] };
+                loadNextChallengeQuestion();
+
+                const timerEl = document.getElementById('challenge-timer');
+                challengeTimer = setInterval(() => {
+                    challengeState.timeLeft--;
+                    if(document.getElementById('challenge-timer')) {
+                        document.getElementById('challenge-timer').textContent = challengeState.timeLeft;
+                    }
+                    if (challengeState.timeLeft <= 0) {
+                        endChallenge();
+                    }
+                }, 1000);
+            }
+
+            function endChallenge() {
+                if(challengeTimer) clearInterval(challengeTimer);
+                challengeTimer = null;
+                challengeState.isActive = false;
+                
+                awardPoints(challengeState.score); 
+                if(challengeState.score > userData.challengeHighScore) {
+                    userData.challengeHighScore = challengeState.score;
+                }
+                saveUserData();
+                renderChallengeScreen();
+            }
+
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            function loadNextChallengeQuestion() {
+                const shortcutPool = shortcutsData.filter(s => s.category !== 'Fungsi');
+                challengeState.currentQuestion = shortcutPool[Math.floor(Math.random() * shortcutPool.length)];
+                challengeState.correctAnswer = currentOS === 'win' ? challengeState.currentQuestion.winKeys : challengeState.currentQuestion.macKeys;
+                challengeState.userAnswer = [];
+                
+                renderChallengeScreen();
+                
+                // Generate puzzle pieces
+                const puzzleZone = document.getElementById('challenge-puzzle-zone');
+                if(!puzzleZone) return;
+
+                const correctKeys = challengeState.correctAnswer;
+                const allPossibleKeys = ['Ctrl', 'Shift', 'Alt', 'Cmd', 'Spasi', 'Enter', 'A', 'B', 'C', 'V', 'X', 'Z', 'T', 'Panah Bawah', '=', ';', '0', '1', '5', '9'];
+                let distractors = allPossibleKeys.filter(k => !correctKeys.includes(k));
+                shuffleArray(distractors);
+                
+                let puzzlePieces = [...correctKeys, ...distractors.slice(0, 4)];
+                puzzlePieces = shuffleArray(puzzlePieces);
+                
+                puzzleZone.innerHTML = puzzlePieces.map(key => `<button class="puzzle-piece">${createKeyElement(key)}</button>`).join('');
+            }
+
+            function checkPuzzleAnswer() {
+                 const answerZone = document.getElementById('challenge-answer-zone');
+                 if(JSON.stringify(challengeState.userAnswer) === JSON.stringify(challengeState.correctAnswer)) {
+                    challengeState.score += 10;
+                    document.getElementById('challenge-score').textContent = challengeState.score;
+                    answerZone.classList.add('flash-correct');
+                    setTimeout(() => {
+                        answerZone.classList.remove('flash-correct');
+                        loadNextChallengeQuestion();
+                    }, 400);
+                 } else {
+                    answerZone.classList.add('flash-wrong');
+                    setTimeout(() => {
+                        answerZone.classList.remove('flash-wrong');
+                        challengeState.userAnswer = [];
+                        loadNextChallengeQuestion(); // Just reload a new question
+                    }, 400);
+                 }
+            }
+            
+            startChallengeBtn.addEventListener('click', () => {
+                challengeModal.classList.remove('hidden');
+                renderChallengeScreen();
+            });
+
+            challengeModal.addEventListener('click', (e) => {
+                if (e.target.id === 'run-challenge-btn' || e.target.id === 'retry-challenge-btn') {
+                    startChallenge();
+                }
+                if (e.target.id === 'close-challenge-btn') {
+                    stopChallenge();
+                }
+                const puzzlePiece = e.target.closest('.puzzle-piece');
+                if(puzzlePiece && challengeState.isActive) {
+                    const key = puzzlePiece.textContent;
+                    challengeState.userAnswer.push(key);
+                    puzzlePiece.disabled = true;
+                    puzzlePiece.style.opacity = '0.3';
+                    
+                    const answerZone = document.getElementById('challenge-answer-zone');
+                    answerZone.innerHTML = challengeState.userAnswer.map(k => createKeyElement(k)).join(' + ');
+
+                    if (challengeState.userAnswer.length === challengeState.correctAnswer.length) {
+                        checkPuzzleAnswer();
+                    }
+                }
+            });
+
+            // --- LEARNING PATH LOGIC ---
+            const learningPaths = {
+                level1: { name: 'Level 1: Efisiensi Dasar', tasks: ['jumpEdge', 'selectCol', 'selectRow', 'createTable'] },
+                level2: { name: 'Level 2: Penguasaan Rumus & Logika', tasks: ['autoSum', 'average', 'if', 'ifs', 'and', 'or', 'iferror', 'count', 'counta', 'max', 'min', 'trim', 'left', 'concat'] },
+                level3: { name: 'Level 3: Analisis Data', tasks: ['vlookup', 'sumif', 'xlookup'] },
+                level4: { name: 'Level 4: Master Ringkasan Data', tasks: ['pivot'] }
+            };
+
+            function renderLearningPaths() {
+                learningPathContainer.innerHTML = '';
+                for(const levelId in learningPaths) {
+                    const level = learningPaths[levelId];
+                    let completedTasks = 0;
+                    const tasksHTML = level.tasks.map(taskId => {
+                        const taskData = shortcutsData.find(s => s.id === taskId);
+                        if (!taskData) return '';
+                        const isCompleted = userData.completed.includes(taskId);
+                        if (isCompleted) completedTasks++;
+                        
+                        return `<li class="learning-path-item flex items-center justify-between p-3 rounded-md transition ${isCompleted ? 'bg-green-500/10' : 'bg-slate-700/50 hover:bg-slate-600/50 cursor-pointer'}" data-shortcut-id="${taskId}">
+                                    <span class="flex items-center gap-3">
+                                        <i data-lucide="${isCompleted ? 'check-circle-2' : 'circle'}" class="w-5 h-5 ${isCompleted ? 'text-green-400' : 'text-slate-500'}"></i>
+                                        <span class="font-medium ${isCompleted ? 'text-slate-400 line-through' : 'text-white'}">${taskData.task}</span>
+                                    </span>
+                                    <span class="text-xs font-semibold ${isCompleted ? 'text-green-400' : 'text-blue-400'}">${isCompleted ? 'Selesai' : 'Mulai'}</span>
+                                </li>`;
+                    }).join('');
+
+                    const progress = level.tasks.length > 0 ? (completedTasks / level.tasks.length) * 100 : 0;
+
+                    const levelHTML = `
+                        <div>
+                            <h4 class="text-xl font-bold text-white mb-3">${level.name}</h4>
+                            <div class="w-full bg-slate-700 rounded-full h-2.5 mb-3">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                            <ul class="space-y-2">${tasksHTML}</ul>
+                        </div>
+                    `;
+                    learningPathContainer.innerHTML += levelHTML;
+                }
+                lucide.createIcons();
+                
+                document.querySelectorAll('.learning-path-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const shortcutId = e.currentTarget.dataset.shortcutId;
+                        const taskData = shortcutsData.find(s => s.id === shortcutId);
+                        const isPracticeAvailable = practiceScenarios.hasOwnProperty(shortcutId);
+
+                        if(!userData.completed.includes(shortcutId) && isPracticeAvailable){
+                            learningPathModal.classList.add('hidden');
+                            startPractice(shortcutId);
+                        }
+                    });
+                });
+            }
+
+            openLearningPathBtn.addEventListener('click', () => {
+                renderLearningPaths();
+                learningPathModal.classList.remove('hidden');
+            });
+            closeLearningPathModalBtn.addEventListener('click', () => {
+                learningPathModal.classList.add('hidden');
+            });
+
+
+            // --- GEMINI API LOGIC ---
+            async function handleExplainFormula() {
+                if (!currentPractice || !currentPractice.answerKey) return;
+
+                geminiExplanationContainer.innerHTML = `<div class="flex items-center justify-center gap-2 text-slate-400"><svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg> Memuat penjelasan...</div>`;
+                geminiExplanationContainer.classList.remove('hidden');
+
+                const apiKey = "AIzaSyAPLE6qf0tFeEdQ0S5FTRiTpOx1x32TAKc";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const systemPrompt = "Anda adalah seorang ahli Excel. Berikan penjelasan ringkas dan to-the-point untuk rumus Excel berikut dalam Bahasa Indonesia. Gunakan format markdown. Awali dengan satu kalimat tujuan utama, lalu jelaskan setiap argumen dalam format bullet point yang singkat.";
+                const userQuery = `Tolong jelaskan rumus ini: ${currentPractice.answerKey}`;
+
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ parts: [{ text: userQuery }] }],
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        // Simple markdown to HTML for a cleaner look
+                        let html = text
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/`([^`]+)`/g, '<code class="bg-slate-700 text-amber-300 px-1.5 py-1 rounded-md">$1</code>')
+                            .replace(/^- (.*$)/gm, '<li class="flex items-start"><span class="mr-2 mt-1">&#8226;</span><span>$1</span></li>')
+                            .replace(/\n/g, '<br>');
+
+                        // Wrap list items in a ul
+                        if(html.includes('<li>')) {
+                            html = html.replace(/(<li.*<\/li>)+/gs, '<ul class="list-none p-0 mt-2 space-y-1">$&</ul>');
+                        }
+                        
+                        // Remove <br> before <ul>
+                        html = html.replace(/<br><ul>/g, '<ul>');
+                        
+                        geminiExplanationContainer.innerHTML = html;
+                    } else {
+                        geminiExplanationContainer.innerHTML = '<p class="text-red-400">Gagal mendapatkan penjelasan. Silakan coba lagi.</p>';
+                    }
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    geminiExplanationContainer.innerHTML = '<p class="text-red-400">Terjadi kesalahan saat menghubungi AI. Periksa koneksi Anda.</p>';
+                }
+            }
+
+            explainFormulaBtn.addEventListener('click', handleExplainFormula);
+
+
+            // --- INISIALISASI ---
+            loadUserData();
+            displayShortcutOfTheDay();
+            handleSearch();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
